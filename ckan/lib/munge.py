@@ -134,12 +134,17 @@ def munge_filename(filename):
     Strips off any path on the front.
     '''
 
+    # CCG modification: we want to keep the BPA filenames the same as they
+    # are in the metadata spreadsheets. Allow uppercase filenames, and 
+    # allow underscores. Increase filename length limit, s3 is fine up to
+    # 1024 (but dropped to 512 to allow room for a prefix.)
+
     # just get the filename ignore the path
     path, filename = os.path.split(filename)
     # clean up
     filename = substitute_ascii_equivalents(filename)
-    filename = filename.lower().strip()
-    filename = re.sub(r'[^a-zA-Z0-9. -]', '', filename).replace(' ', '-')
+    filename = filename.strip()
+    filename = re.sub(r'[^a-zA-Z0-9. -_]', '', filename).replace(' ', '-')
     # resize if needed but keep extension
     name, ext = os.path.splitext(filename)
     # limit overly long extensions
@@ -147,7 +152,7 @@ def munge_filename(filename):
         ext = ext[:21]
     # max/min size
     ext_length = len(ext)
-    name = _munge_to_length(name, max(3 - ext_length, 1), 100 - ext_length)
+    name = _munge_to_length(name, max(3 - ext_length, 1), 512 - ext_length)
     filename = name + ext
 
     return filename
