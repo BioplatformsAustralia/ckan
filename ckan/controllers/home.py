@@ -46,11 +46,12 @@ class HomeController(base.BaseController):
                        'user': c.user, 'auth_user_obj': c.userobj}
             data_dict = {
                 'q': '*:*',
+                'fq': '',
                 'facet.field': g.facets,
                 'rows': 4,
                 'start': 0,
                 'sort': 'views_recent desc',
-                'fq': 'capacity:"public"'
+                'include_private': True,
             }
             query = logic.get_action('package_search')(
                 context, data_dict)

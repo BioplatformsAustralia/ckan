@@ -422,6 +422,9 @@ def default_user_schema():
 def user_new_form_schema():
     schema = default_user_schema()
 
+    schema['request_reason'] = [not_empty, unicode]
+    schema['project_of_interest'] = [not_empty, unicode]
+
     schema['password1'] = [unicode, user_both_passwords_entered,
                            user_password_validator, user_passwords_match]
     schema['password2'] = [unicode]
@@ -610,7 +613,8 @@ def default_resource_search_schema():
         'fields': [ignore_missing],  # dict of fields
         'order_by': [ignore_missing, unicode],
         'offset': [ignore_missing, natural_number_validator],
-        'limit': [ignore_missing, natural_number_validator]
+        'limit': [ignore_missing, natural_number_validator],
+        'include_private': [ignore_missing, boolean_validator],
     }
     return schema
 
