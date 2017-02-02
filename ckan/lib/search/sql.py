@@ -16,7 +16,7 @@ class PackageSearchQuery(SearchQuery):
         assert isinstance(query, dict)
         # no support for faceting atm
         self.facets = {}
-        limit = min(1000, int(query.get('rows', 10)))
+        limit = min(10000, int(query.get('rows', 10)))
 
         q = query.get('q')
         ourq = model.Session.query(model.Package.id).filter_by(state='active')

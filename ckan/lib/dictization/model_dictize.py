@@ -513,7 +513,7 @@ def tag_dictize(tag, context, include_datasets=True):
         else:
             tag_query += u'+tags:"{0}"'.format(tag.name)
 
-        q = {'q': tag_query, 'fl': 'data_dict', 'wt': 'json', 'rows': 1000}
+        q = {'q': tag_query, 'fl': 'data_dict', 'wt': 'json', 'rows': 10000}
 
         package_dicts = [h.json.loads(result['data_dict'])
                          for result in query.run(q)['results']]

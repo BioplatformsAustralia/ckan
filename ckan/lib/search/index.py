@@ -290,7 +290,7 @@ class PackageSearchIndex(SearchIndex):
             conn.add_many([pkg_dict], _commit=commit)
         except solr.core.SolrException, e:
             msg = 'Solr returned an error: {0} {1} - {2}'.format(
-                e.httpcode, e.reason, e.body[:1000] # limit huge responses
+                e.httpcode, e.reason, e.body[:10000] # limit huge responses
             )
             raise SearchIndexError(msg)
         except socket.error, e:
