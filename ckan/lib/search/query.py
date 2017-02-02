@@ -149,7 +149,7 @@ class SearchQuery(object):
                     _open_licenses.append(license.id)
         return _open_licenses
 
-    def get_all_entity_ids(self, max_results=1000):
+    def get_all_entity_ids(self, max_results=10000):
         """
         Return a list of the IDs of all indexed packages.
         """
@@ -247,7 +247,7 @@ class ResourceSearchQuery(SearchQuery):
 
 
 class PackageSearchQuery(SearchQuery):
-    def get_all_entity_ids(self, max_results=1000):
+    def get_all_entity_ids(self, max_results=10000):
         """
         Return a list of the IDs of all indexed packages.
         """
@@ -301,7 +301,7 @@ class PackageSearchQuery(SearchQuery):
             query['q'] = "*:*"
 
         # number of results
-        rows_to_return = min(1000, int(query.get('rows', 10)))
+        rows_to_return = min(10000, int(query.get('rows', 10)))
         if rows_to_return > 0:
             # #1683 Work around problem of last result being out of order
             #       in SOLR 1.4
