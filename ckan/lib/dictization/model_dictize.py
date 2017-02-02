@@ -404,7 +404,7 @@ def group_dictize(group, context,
                 try:
                     packages_limit = context['limits']['packages']
                 except KeyError:
-                    q['rows'] = 1000  # Only the first 1000 datasets are returned
+                    q['rows'] = 10000  # Only the first 10000 datasets are returned
                 else:
                     q['rows'] = packages_limit
 
