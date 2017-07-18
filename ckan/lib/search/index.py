@@ -288,7 +288,7 @@ class PackageSearchIndex(SearchIndex):
             conn.add(docs=[pkg_dict], commit=commit)
         except pysolr.SolrError, e:
             msg = 'Solr returned an error: {0}'.format(
-                e[:10000] # limit huge responses
+                e[:50000] # limit huge responses
             )
             raise SearchIndexError(msg)
         except socket.error, e:
