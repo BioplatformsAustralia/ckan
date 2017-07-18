@@ -393,7 +393,7 @@ def group_dictize(group, context,
                 try:
                     packages_limit = context['limits']['packages']
                 except KeyError:
-                    q['rows'] = 10000  # Only the first 10000 datasets are returned
+                    q['rows'] = 50000  # Only the first 50000 datasets are returned
                 else:
                     q['rows'] = packages_limit
 
@@ -502,7 +502,7 @@ def tag_dictize(tag, context, include_datasets=True):
         else:
             tag_query += u'+tags:"{0}"'.format(tag.name)
 
-        q = {'q': tag_query, 'fl': 'data_dict', 'wt': 'json', 'rows': 10000}
+        q = {'q': tag_query, 'fl': 'data_dict', 'wt': 'json', 'rows': 50000}
 
         package_dicts = [h.json.loads(result['data_dict'])
                          for result in query.run(q)['results']]
