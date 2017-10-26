@@ -18,6 +18,10 @@ import ckan.lib.navl.dictization_functions as dictization_functions
 import ckan.lib.authenticator as authenticator
 import ckan.plugins as p
 
+import requests
+import os
+import json
+
 from ckan.common import _, c, g, request, response
 
 log = logging.getLogger(__name__)
@@ -162,10 +166,90 @@ class UserController(base.BaseController):
 
         return self.new(data, errors, error_summary)
 
+    def _generate_internal_logs(self, log_message):
+        '''
+        This helper function is called if sending a new user registration email fails.
+        '''
+
+        logging.warning("There was an error sending the email. Writing to log file.")
+
+        os.chdir(os.environ['REGISTRATION_ERROR_LOG_FILE_PATH'])
+
+        with open(os.environ['REGISTRATION_ERROR_LOG_FILE_NAME'], "a") as fp:
+            try:
+                fp.write(log_message)
+                fp.write("\n\n")
+            except:
+                logging.warning("There is an error writing to the log file. Dumping the output to console.")
+                logging.warning(log_message)
+
+        logging.warning("Written to log file.")
+
+    def email_new_user_details_using_mailgun(self, request_data):
+        request_params = dict(request_data)
+
+        email_body = "There is a new user registration request. \
+        \nThe user's details are as follows: \
+        \n\
+        \nUsername: {0}\
+        \nName: {1} \
+        \nEmail: {2} \
+        \nReason for Request: {3} \
+        \nProject of Interest: {4} ".format(request_params['name'], request_params['fullname'], request_params['email'], request_params['request_reason'], request_params['project_of_interest'])
+
+        MAILGUN_VARS = {
+            'MAILGUN_API_KEY': '',
+            'MAILGUN_API_DOMAIN': '',
+            'MAILGUN_SENDER_EMAIL': '',
+            'MAILGUN_RECEIVER_EMAIL': ''
+        }
+
+        unset_var = 0
+        for key, value in MAILGUN_VARS.iteritems():
+            if key in os.environ:
+                MAILGUN_VARS[key] = os.environ[key]
+            else:
+                logging.warning("The folloiwng mailgun variable is not set: {0}".format(key))
+                unset_var = 1
+
+        if unset_var == 1:
+            self._generate_internal_logs(email_body)
+            return
+
+        # Uncomment this to test failing email send and to test writing to logs
+        # The logs go into /etc/ckan in the container
+        # sender = 'this_email_would_not_work'
+        sender = MAILGUN_VARS['MAILGUN_SENDER_EMAIL']
+
+        request_url = 'https://api.mailgun.net/v2/{0}/messages'.format(MAILGUN_VARS['MAILGUN_API_DOMAIN'])
+
+        request = requests.post(request_url, auth=('api', MAILGUN_VARS['MAILGUN_API_KEY']), data={
+            'from': sender,
+            'to': MAILGUN_VARS['MAILGUN_RECEIVER_EMAIL'],
+            'subject': 'BPA New User Registration Request',
+            'text': email_body
+        })
+
+        recv_msg = json.loads(request.text)['message']
+
+        if request.status_code == 200 and recv_msg == "Queued. Thank you.":
+            logging.warning("New user request sent successfuly.")
+        else:
+            logging.warning("Error sending email. Please check logs for details.")
+            logging.warning(request.status_code)
+            logging.warning(recv_msg)
+
+            self._generate_internal_logs(email_body)
+            return
+
     def new(self, data=None, errors=None, error_summary=None):
         '''GET to display a form for registering a new user.
            or POST the form data to actually do the user registration.
         '''
+
+        if request.params:
+            self.email_new_user_details_using_mailgun(request.params)
+
         context = {'model': model,
                    'session': model.Session,
                    'user': c.user,
@@ -258,7 +342,11 @@ class UserController(base.BaseController):
         if not c.user:
             # log the user in programatically
             set_repoze_user(data_dict['name'])
-            h.redirect_to(controller='user', action='me', __ckan_no_root=True)
+
+            return render('user/registration_success.html')
+
+            # We do not want to redirect the user here.
+            # h.redirect_to(controller='user', action='me', __ckan_no_root=True)
         else:
             # #1799 User has managed to register whilst logged in - warn user
             # they are not re-logged in as new user.
