@@ -213,6 +213,8 @@ class UserController(base.BaseController):
         for key, value in MAILGUN_VARS.iteritems():
             if value is None:
                 logging.warning("The following mailgun api key is not set {}".format(key))
+                _generate_internal_logs(email_body)
+                return
 
         # Uncomment this to test failing email send and to test writing to logs
         # The logs go into /data in the container
