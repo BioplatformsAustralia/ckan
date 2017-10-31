@@ -173,15 +173,19 @@ class UserController(base.BaseController):
 
         logging.warning("There was an error sending the email. Writing to log file.")
 
-        os.chdir(os.environ['REGISTRATION_ERROR_LOG_FILE_PATH'])
+        log_path = os.environ['REGISTRATION_ERROR_LOG_FILE_PATH']
 
-        with open(os.environ['REGISTRATION_ERROR_LOG_FILE_NAME'], "a") as fp:
-            try:
-                fp.write(log_message)
-                fp.write("\n\n")
-            except:
-                logging.warning("There is an error writing to the log file. Dumping the output to console.")
-                logging.warning(log_message)
+        try:
+            with open(log_path + '/' + os.environ['REGISTRATION_ERROR_LOG_FILE_NAME'], "a") as fp:
+                try:
+                    fp.write(log_message)
+                    fp.write("\n\n")
+                except:
+                    logging.warning("There is an error writing to the log file. Dumping the output to console.")
+                    logging.warning(log_message)
+        except:
+            logging.warning("There is an error writing to the log file. Dumping the output to console.")
+            logging.warning(log_message)
 
         logging.warning("Written to log file.")
 
@@ -191,33 +195,27 @@ class UserController(base.BaseController):
         email_body = "There is a new user registration request. \
         \nThe user's details are as follows: \
         \n\
-        \nUsername: {0}\
-        \nName: {1} \
-        \nEmail: {2} \
-        \nReason for Request: {3} \
-        \nProject of Interest: {4} ".format(request_params['name'], request_params['fullname'], request_params['email'], request_params['request_reason'], request_params['project_of_interest'])
+        \nUsername: {username}\
+        \nName: {name} \
+        \nEmail: {email} \
+        \nReason for Request: {reason_for_request} \
+        \nProject of Interest: {project_of_interest} ".format(\
+        username=request_params['name'], \
+        name=request_params['fullname'], \
+        email=request_params['email'], \
+        reason_for_request=request_params['request_reason'], \
+        project_of_interest=request_params['project_of_interest'])
 
-        MAILGUN_VARS = {
-            'MAILGUN_API_KEY': '',
-            'MAILGUN_API_DOMAIN': '',
-            'MAILGUN_SENDER_EMAIL': '',
-            'MAILGUN_RECEIVER_EMAIL': ''
-        }
+        MAILGUN_ENVIRON_VARS = ['MAILGUN_API_KEY', 'MAILGUN_API_DOMAIN', 'MAILGUN_SENDER_EMAIL', 'MAILGUN_RECEIVER_EMAIL']
 
-        unset_var = 0
+        MAILGUN_VARS = dict ((t, os.environ.get(t)) for t in MAILGUN_ENVIRON_VARS)
+
         for key, value in MAILGUN_VARS.iteritems():
-            if key in os.environ:
-                MAILGUN_VARS[key] = os.environ[key]
-            else:
-                logging.warning("The folloiwng mailgun variable is not set: {0}".format(key))
-                unset_var = 1
-
-        if unset_var == 1:
-            self._generate_internal_logs(email_body)
-            return
+            if value is None:
+                logging.warning("The following mailgun api key is not set {}".format(key))
 
         # Uncomment this to test failing email send and to test writing to logs
-        # The logs go into /etc/ckan in the container
+        # The logs go into /data in the container
         # sender = 'this_email_would_not_work'
         sender = MAILGUN_VARS['MAILGUN_SENDER_EMAIL']
 
@@ -232,7 +230,7 @@ class UserController(base.BaseController):
 
         recv_msg = json.loads(request.text)['message']
 
-        if request.status_code == 200 and recv_msg == "Queued. Thank you.":
+        if request.status_code == 200:
             logging.warning("New user request sent successfuly.")
         else:
             logging.warning("Error sending email. Please check logs for details.")
