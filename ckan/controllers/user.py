@@ -170,24 +170,23 @@ class UserController(base.BaseController):
         '''
         This helper function is called if sending a new user registration email fails.
         '''
-
         logging.warning("There was an error sending the email. Writing to log file.")
 
-        log_path = os.environ['REGISTRATION_ERROR_LOG_FILE_PATH']
+        try:
+            log_path = os.environ.get('REGISTRATION_ERROR_LOG_FILE_PATH')
+            log_file = os.environ.get('REGISTRATION_ERROR_LOG_FILE_NAME')
+        except:
+            logging.warning("Unable to get logging file details from environment. Dumping output to console.")
+            logging.warning(log_message)
+            return
 
         try:
-            with open(log_path + '/' + os.environ['REGISTRATION_ERROR_LOG_FILE_NAME'], "a") as fp:
-                try:
-                    fp.write(log_message)
-                    fp.write("\n\n")
-                except:
-                    logging.warning("There is an error writing to the log file. Dumping the output to console.")
-                    logging.warning(log_message)
+            with open(log_path + '/' + log_file, "a") as fp:
+                fp.write(log_message)
+                fp.write("\n\n")
         except:
-            logging.warning("There is an error writing to the log file. Dumping the output to console.")
+            logging.warning("Error writing to the log file. Dumping output to console.")
             logging.warning(log_message)
-
-        logging.warning("Written to log file.")
 
     def email_new_user_details_using_mailgun(self, request_data):
         request_params = dict(request_data)
@@ -207,18 +206,16 @@ class UserController(base.BaseController):
         project_of_interest=request_params['project_of_interest'])
 
         MAILGUN_ENVIRON_VARS = ['MAILGUN_API_KEY', 'MAILGUN_API_DOMAIN', 'MAILGUN_SENDER_EMAIL', 'MAILGUN_RECEIVER_EMAIL']
-
         MAILGUN_VARS = dict ((t, os.environ.get(t)) for t in MAILGUN_ENVIRON_VARS)
-
-        for key, value in MAILGUN_VARS.iteritems():
-            if value is None:
-                logging.warning("The following mailgun api key is not set {}".format(key))
-                _generate_internal_logs(email_body)
-                return
+        
+        if None in MAILGUN_VARS.values():
+            logging.warning("The following mailgun api key is not set {}".format(key))
+            self._generate_internal_logs(email_body)
+            return
 
         # Uncomment this to test failing email send and to test writing to logs
         # The logs go into /data in the container
-        # sender = 'this_email_would_not_work'
+        #sender = 'this_email_would_not_work'
         sender = MAILGUN_VARS['MAILGUN_SENDER_EMAIL']
 
         request_url = 'https://api.mailgun.net/v2/{0}/messages'.format(MAILGUN_VARS['MAILGUN_API_DOMAIN'])
