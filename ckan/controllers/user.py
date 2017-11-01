@@ -172,10 +172,10 @@ class UserController(base.BaseController):
         '''
         logging.warning("There was an error sending the email. Writing to log file.")
 
-        try:
-            log_path = os.environ.get('REGISTRATION_ERROR_LOG_FILE_PATH')
-            log_file = os.environ.get('REGISTRATION_ERROR_LOG_FILE_NAME')
-        except:
+        log_path = os.environ.get('REGISTRATION_ERROR_LOG_FILE_PATH')
+        log_file = os.environ.get('REGISTRATION_ERROR_LOG_FILE_NAME')
+
+        if not log_path or not log_file:
             logging.warning("Unable to get logging file details from environment. Dumping output to console.")
             logging.warning(log_message)
             return
@@ -207,7 +207,7 @@ class UserController(base.BaseController):
 
         MAILGUN_ENVIRON_VARS = ['MAILGUN_API_KEY', 'MAILGUN_API_DOMAIN', 'MAILGUN_SENDER_EMAIL', 'MAILGUN_RECEIVER_EMAIL']
         MAILGUN_VARS = dict ((t, os.environ.get(t)) for t in MAILGUN_ENVIRON_VARS)
-        
+
         if None in MAILGUN_VARS.values():
             logging.warning("The following mailgun api key is not set {}".format(key))
             self._generate_internal_logs(email_body)
@@ -237,7 +237,6 @@ class UserController(base.BaseController):
             logging.warning(recv_msg)
 
             self._generate_internal_logs(email_body)
-            return
 
     def new(self, data=None, errors=None, error_summary=None):
         '''GET to display a form for registering a new user.
