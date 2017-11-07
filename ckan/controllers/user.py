@@ -242,10 +242,6 @@ class UserController(base.BaseController):
         '''GET to display a form for registering a new user.
            or POST the form data to actually do the user registration.
         '''
-
-        if request.params:
-            self.email_new_user_details_using_mailgun(request.params)
-
         context = {'model': model,
                    'session': model.Session,
                    'user': c.user,
@@ -338,6 +334,9 @@ class UserController(base.BaseController):
         if not c.user:
             # log the user in programatically
             set_repoze_user(data_dict['name'])
+
+            if request.params:
+                self.email_new_user_details_using_mailgun(request.params)
 
             return render('user/registration_success.html')
 
