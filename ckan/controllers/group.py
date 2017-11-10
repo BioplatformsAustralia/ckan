@@ -938,30 +938,6 @@ class GroupController(base.BaseController):
         group_type = c.group_dict['type']
         self._setup_template_variables(context, {'id': id},
                                        group_type=group_type)
-
-        ## CCG: copied code over from read() so that facets
-        ## are set up, and we can show them on the about page
-        data_dict = {'id': id, 'type': group_type}
-
-        # unicode format (decoded from utf8)
-        c.q = request.params.get('q', '')
-
-        try:
-            # Do not query for the group datasets when dictizing, as they will
-            # be ignored and get requested on the controller anyway
-            data_dict['include_datasets'] = False
-            c.group_dict = self._action('group_show')(context, data_dict)
-            c.group = context['group']
-        except (NotFound, NotAuthorized):
-            abort(404, _('Group not found'))
-
-        self._read(id, 20, group_type)
-
-        ## CCG: end code copy
-
-        # allow the sidebar to differentiate this page
-        c.about_page = True
-
         return render(self._about_template(group_type),
                       extra_vars={'group_type': group_type})
 
