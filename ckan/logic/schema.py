@@ -421,6 +421,9 @@ def default_user_schema():
 def user_new_form_schema():
     schema = default_user_schema()
 
+    schema['request_reason'] = [not_empty, unicode]
+    schema['project_of_interest'] = [not_empty, unicode]
+
     schema['password1'] = [unicode, user_both_passwords_entered,
                            user_password_validator, user_passwords_match]
     schema['password2'] = [unicode]
