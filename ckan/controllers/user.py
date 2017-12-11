@@ -188,8 +188,19 @@ class UserController(base.BaseController):
             logging.warning("Error writing to the log file. Dumping output to console.")
             logging.warning(log_message)
 
-    def email_new_user_details_using_mailgun(self, request_data):
+    def email_new_user_details_using_mailgun_and_log_in_bpam(self, request_data):
         request_params = dict(request_data)
+
+        bpam_log_key = os.environ.get('BPAM_REGISTRATION_LOG_KEY')
+
+        details = {
+            "username": request_params['name'],
+            "name": request_params['fullname'],
+            "email": request_params['email'],
+            "reason_for_request": request_params['request_reason'],
+            "project_of_interest": request_params['project_of_interest'],
+            "key": bpam_log_key,
+        }
 
         email_body = "There is a new user registration request. \
         \nThe user's details are as follows: \
@@ -199,11 +210,23 @@ class UserController(base.BaseController):
         \nEmail: {email} \
         \nReason for Request: {reason_for_request} \
         \nProject of Interest: {project_of_interest} ".format(\
-        username=request_params['name'], \
-        name=request_params['fullname'], \
-        email=request_params['email'], \
-        reason_for_request=request_params['request_reason'], \
-        project_of_interest=request_params['project_of_interest'])
+            username=details['username'], \
+            name=details['name'], \
+            email=details['email'], \
+            reason_for_request=details['reason_for_request'], \
+            project_of_interest=details['project_of_interest']
+        )
+
+        # Send the user registration details to bpam for recording/tracking in the database
+
+        # Use the first url to test on a local dev set up
+        # r = requests.post('http://172.17.0.1/polls/record_registrations', data=details)
+        r = requests.post('http://data.bioplatforms.com/ckan/record_registrations', data=details)
+        if r.status_code == 200:
+            logging.warning('User details sent to BPAM server successfully.')
+        else:
+            logging.warning('Error sending user details to BPAM server.')
+
 
         MAILGUN_ENVIRON_VARS = ['MAILGUN_API_KEY', 'MAILGUN_API_DOMAIN', 'MAILGUN_SENDER_EMAIL', 'MAILGUN_RECEIVER_EMAIL']
         MAILGUN_VARS = dict ((t, os.environ.get(t)) for t in MAILGUN_ENVIRON_VARS)
@@ -215,7 +238,7 @@ class UserController(base.BaseController):
 
         # Uncomment this to test failing email send and to test writing to logs
         # The logs go into /data in the container
-        #sender = 'this_email_would_not_work'
+        # sender = 'this_email_would_not_work'
         sender = MAILGUN_VARS['MAILGUN_SENDER_EMAIL']
 
         request_url = 'https://api.mailgun.net/v2/{0}/messages'.format(MAILGUN_VARS['MAILGUN_API_DOMAIN'])
@@ -336,7 +359,7 @@ class UserController(base.BaseController):
             set_repoze_user(data_dict['name'])
 
             if request.params:
-                self.email_new_user_details_using_mailgun(request.params)
+                self.email_new_user_details_using_mailgun_and_log_in_bpam(request.params)
 
             return render('user/registration_success.html')
 
