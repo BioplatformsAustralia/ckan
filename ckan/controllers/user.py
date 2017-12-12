@@ -191,6 +191,7 @@ class UserController(base.BaseController):
     def email_new_user_details_using_mailgun_and_log_in_bpam(self, request_data):
         request_params = dict(request_data)
 
+        bpam_log_url = os.environ.get('BPAM_REGISTRATION_LOG_URL')
         bpam_log_key = os.environ.get('BPAM_REGISTRATION_LOG_KEY')
 
         details = {
@@ -215,7 +216,7 @@ class UserController(base.BaseController):
 
         # Use the first url to test on a local dev set up
         # r = requests.post('http://172.17.0.1/polls/record_registrations', data=details)
-        r = requests.post('http://data.bioplatforms.com/ckan/record_registrations', data=details)
+        r = requests.post(bpam_log_url, data=details)
         if r.status_code == 200:
             logging.warning('User details sent to BPAM server successfully.')
         else:
