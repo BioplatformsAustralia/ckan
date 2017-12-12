@@ -209,13 +209,7 @@ class UserController(base.BaseController):
         \nName: {name} \
         \nEmail: {email} \
         \nReason for Request: {reason_for_request} \
-        \nProject of Interest: {project_of_interest} ".format(\
-            username=details['username'], \
-            name=details['name'], \
-            email=details['email'], \
-            reason_for_request=details['reason_for_request'], \
-            project_of_interest=details['project_of_interest']
-        )
+        \nProject of Interest: {project_of_interest} ".format(**details)
 
         # Send the user registration details to bpam for recording/tracking in the database
 
