@@ -422,7 +422,7 @@ class UserController(base.BaseController):
 
             user_dict = get_action('user_show')(context, data_dict)
 
-            return self.me()
+            return h.redirect_to('/')
         else:
             err = _('Login failed. Bad username or password.')
             if asbool(config.get('ckan.legacy_templates', 'false')):
