@@ -390,6 +390,7 @@ def make_map():
         m.connect('/user/logged_out_redirect', action='logged_out_page')
         m.connect('/user/reset', action='request_reset')
         m.connect('/user/me', action='check_permissions')
+        m.connect('/user/check_permissions', action='check_permissions')
         m.connect('/user/set_lang/{lang}', action='set_lang')
         m.connect('user_datasets', '/user/{id:.*}', action='read',
                   ckan_icon='sitemap')
