@@ -165,6 +165,7 @@ class UserController(base.BaseController):
         for uo in user_organisations:
             organisations.append(uo['name'])
 
+        # Note: the Ausmicro org name on prod is: 'australian-microbiome'
         data_portion = {
             'timestamp': time.time(),
             'organisations': organisations
@@ -172,7 +173,7 @@ class UserController(base.BaseController):
 
         data_portion = json.dumps(data_portion)
 
-        secret_key = 'secret-key-foobarbaz' #!!! NOTE: Potentially have to change the secret key
+        secret_key = os.environ.get('BPAOTU_AUTH_SECRET_KEY')
         digest_maker = hmac.new(secret_key)
         digest_maker.update(data_portion)
         digest = digest_maker.hexdigest()
