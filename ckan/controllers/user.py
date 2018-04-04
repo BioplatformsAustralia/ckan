@@ -159,6 +159,22 @@ class UserController(base.BaseController):
         h.redirect_to(locale=locale, controller='user', action='dashboard')
 
     def check_permissions(self):
+        if not c.user:
+            abort(403, 'Please log into CKAN.')
+
+        print(dir(c))
+        print(dir(c.user))
+
+        context = {
+            'user': c.user,
+            'auth_user_obj': c.userobj
+        }
+
+        data_dict = {'id': c.userobj.id }
+        old_data = get_action('user_show')(context, data_dict)
+
+        # print(old_data['email'])
+
         organisations = []
 
         user_organisations = h.organizations_available(permission='read')
@@ -167,6 +183,7 @@ class UserController(base.BaseController):
 
         # Note: the Ausmicro org name on prod is: 'australian-microbiome'
         data_portion = {
+            'email': old_data['email'],
             'timestamp': time.time(),
             'organisations': organisations
         }
