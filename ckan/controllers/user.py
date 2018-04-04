@@ -165,15 +165,13 @@ class UserController(base.BaseController):
         print(dir(c))
         print(dir(c.user))
 
-        context = {
+        user_details = {
             'user': c.user,
             'auth_user_obj': c.userobj
         }
 
-        data_dict = {'id': c.userobj.id }
-        old_data = get_action('user_show')(context, data_dict)
-
-        # print(old_data['email'])
+        user_id = {'id': c.userobj.id }
+        user_data = get_action('user_show')(user_details, user_id)
 
         organisations = []
 
@@ -183,7 +181,7 @@ class UserController(base.BaseController):
 
         # Note: the Ausmicro org name on prod is: 'australian-microbiome'
         data_portion = {
-            'email': old_data['email'],
+            'email': user_data['email'],
             'timestamp': time.time(),
             'organisations': organisations
         }
