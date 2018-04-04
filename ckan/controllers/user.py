@@ -162,9 +162,6 @@ class UserController(base.BaseController):
         if not c.user:
             abort(403, 'Please log into CKAN.')
 
-        print(dir(c))
-        print(dir(c.user))
-
         user_details = {
             'user': c.user,
             'auth_user_obj': c.userobj
