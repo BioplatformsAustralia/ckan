@@ -21,6 +21,8 @@ import ckan.plugins as p
 import requests
 import os
 import json
+import time
+import hmac
 
 from ckan.common import _, c, g, request, response
 
@@ -155,6 +157,40 @@ class UserController(base.BaseController):
                           id=None)
         user_ref = c.userobj.get_reference_preferred_for_uri()
         h.redirect_to(locale=locale, controller='user', action='dashboard')
+
+    def check_permissions(self):
+        if not c.user:
+            abort(403, 'Please log into CKAN.')
+
+        user_details = {
+            'user': c.user,
+            'auth_user_obj': c.userobj
+        }
+
+        user_id = {'id': c.userobj.id }
+        user_data = get_action('user_show')(user_details, user_id)
+
+        organisations = []
+
+        user_organisations = h.organizations_available(permission='read')
+        for uo in user_organisations:
+            organisations.append(uo['name'])
+
+        # Note: the Ausmicro org name on prod is: 'australian-microbiome'
+        data_portion = {
+            'email': user_data['email'],
+            'timestamp': time.time(),
+            'organisations': organisations
+        }
+
+        data_portion = json.dumps(data_portion)
+
+        secret_key = os.environ.get('BPAOTU_AUTH_SECRET_KEY')
+        digest_maker = hmac.new(secret_key)
+        digest_maker.update(data_portion)
+        digest = digest_maker.hexdigest()
+
+        return (digest + "||" + data_portion)
 
     def register(self, data=None, errors=None, error_summary=None):
         context = {'model': model, 'session': model.Session, 'user': c.user,
