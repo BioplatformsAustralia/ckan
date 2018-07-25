@@ -286,6 +286,12 @@ def make_map():
     map.redirect('/groups', '/group')
     map.redirect('/groups/{url:.*}', '/group/{url}')
 
+
+
+
+
+
+
     # These named routes are used for custom group forms which will use the
     # names below based on the group.type ('group' is the default type)
     with SubMapper(map, controller='group') as m:
@@ -333,8 +339,22 @@ def make_map():
         m.connect('organization_activity', '/organization/activity/{id}/{offset}',
                   action='activity', ckan_icon='time')
         m.connect('organization_read', '/organization/{id}', action='read')
+
+
+
+
         m.connect('organization_about', '/organization/about/{id}',
                   action='about', ckan_icon='info-sign')
+
+
+        m.connect('organization_about1', '/organization/about1/{id}',
+                  action='about1', ckan_icon='info-sign')
+
+
+
+
+
+
         m.connect('organization_read', '/organization/{id}', action='read',
                   ckan_icon='sitemap')
         m.connect('organization_edit', '/organization/edit/{id}',
@@ -346,6 +366,14 @@ def make_map():
                   action='bulk_process', ckan_icon='sitemap')
     lib_plugins.register_package_plugins(map)
     lib_plugins.register_group_plugins(map)
+
+
+
+
+
+
+
+
 
     # tags
     map.redirect('/tags', '/tag')

@@ -941,6 +941,24 @@ class GroupController(base.BaseController):
         return render(self._about_template(group_type),
                       extra_vars={'group_type': group_type})
 
+
+
+    def about1(self, id):
+        group_type = self._ensure_controller_matches_group_type(id)
+        context = {'model': model, 'session': model.Session,
+                   'user': c.user}
+        c.group_dict = self._get_group_dict(id)
+        group_type = c.group_dict['type']
+        self._setup_template_variables(context, {'id': id},
+                                       group_type=group_type)
+        return render(self._about_template(group_type),
+                      extra_vars={'group_type': group_type})
+
+
+
+
+
+
     def _get_group_dict(self, id):
         ''' returns the result of group_show action or aborts if there is a
         problem '''
