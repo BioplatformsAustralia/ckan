@@ -332,9 +332,13 @@ def make_map():
                   ])))
         m.connect('organization_activity', '/organization/activity/{id}/{offset}',
                   action='activity', ckan_icon='time')
+        m.connect('organization_about', '/organization/about/{id}', action='about')
         m.connect('organization_read', '/organization/{id}', action='read')
-        m.connect('organization_about', '/organization/about/{id}',
-                  action='about', ckan_icon='info-sign')
+        m.connect('organization_map', '/organization/map/{id}', action='map')
+        m.connect('organization_contextualdata', '/organization/contextualdata/{id}', action='contextualdata')
+        m.connect('organization_processeddata', '/organization/processeddata/{id}', action='processeddata')
+        m.connect('organization_gallery', '/organization/gallery/{id}', action='gallery')
+        m.connect('organization_information', '/organization/information/{id}', action='information')
         m.connect('organization_read', '/organization/{id}', action='read',
                   ckan_icon='sitemap')
         m.connect('organization_edit', '/organization/edit/{id}',
