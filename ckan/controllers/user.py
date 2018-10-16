@@ -224,11 +224,11 @@ class UserController(base.BaseController):
             logging.warning("Error writing to the log file. Dumping output to console.")
             logging.warning(log_message)
 
-    def email_new_user_details_using_mailgun_and_log_in_bpam(self, request_data):
+    def email_new_user_request_to_helpdesk(self, request_data):
+        '''
+        Send an email containing the user request details to Zendesk.
+        '''
         request_params = dict(request_data)
-
-        bpam_log_url = os.environ.get('BPAM_REGISTRATION_LOG_URL')
-        bpam_log_key = os.environ.get('BPAM_REGISTRATION_LOG_KEY')
 
         details = {
             "username": request_params['name'],
@@ -247,17 +247,6 @@ class UserController(base.BaseController):
         \nEmail: {email} \
         \nReason for Request: {reason_for_request} \
         \nProject of Interest: {project_of_interest} ".format(**details)
-
-        # Send the user registration details to bpam for recording/tracking in the database
-
-        # Use the first url to test on a local dev set up
-        # r = requests.post('http://172.17.0.1/polls/record_registrations', data=details)
-        r = requests.post(bpam_log_url, data=details)
-        if r.status_code == 200:
-            logging.warning('User details sent to BPAM server successfully.')
-        else:
-            logging.warning('Error sending user details to BPAM server.')
-
 
         MAILGUN_ENVIRON_VARS = ['MAILGUN_API_KEY', 'MAILGUN_API_DOMAIN', 'MAILGUN_SENDER_EMAIL', 'MAILGUN_RECEIVER_EMAIL']
         MAILGUN_VARS = dict ((t, os.environ.get(t)) for t in MAILGUN_ENVIRON_VARS)
@@ -283,6 +272,8 @@ class UserController(base.BaseController):
 
         recv_msg = json.loads(request.text)['message']
 
+        logging.warning(request.status_code)
+
         if request.status_code == 200:
             logging.warning("New user request sent successfuly.")
         else:
@@ -291,6 +282,34 @@ class UserController(base.BaseController):
             logging.warning(recv_msg)
 
             self._generate_internal_logs(email_body)
+
+    def log_new_user_request_in_bpam(self, request_data):
+        '''
+        Send the user registration details to bpam for recording/tracking in the database.
+        '''
+
+        request_params = dict(request_data)
+
+        bpam_log_url = os.environ.get('BPAM_REGISTRATION_LOG_URL')
+        bpam_log_key = os.environ.get('BPAM_REGISTRATION_LOG_KEY')
+
+        details = {
+            "username": request_params['name'],
+            "name": request_params['fullname'],
+            "email": request_params['email'],
+            "reason_for_request": request_params['request_reason'],
+            "project_of_interest": request_params['project_of_interest'],
+            "key": bpam_log_key,
+        }
+
+        # Use the first url to test on a local dev set up
+        # r = requests.post('http://172.17.0.1/polls/record_registrations', data=details)
+        r = requests.post(bpam_log_url, data=details)
+
+        if r.status_code == 200:
+            logging.warning('User details sent to BPAM server successfully.')
+        else:
+            logging.warning('Error sending user details to BPAM server.')
 
     def new(self, data=None, errors=None, error_summary=None):
         '''GET to display a form for registering a new user.
@@ -390,12 +409,19 @@ class UserController(base.BaseController):
             set_repoze_user(data_dict['name'])
 
             if request.params:
-                self.email_new_user_details_using_mailgun_and_log_in_bpam(request.params)
+                # TODO: FIX THIS HERE
+
+                if request.params['project_of_interest'] == 'Australian Microbiome':
+                    pass
+
+                self.email_new_user_request_to_helpdesk(request.params)
+                self.log_new_user_request_in_bpam(request.params)
 
             return render('user/registration_success.html')
 
             # We do not want to redirect the user here.
             # h.redirect_to(controller='user', action='me', __ckan_no_root=True)
+
         else:
             # #1799 User has managed to register whilst logged in - warn user
             # they are not re-logged in as new user.
