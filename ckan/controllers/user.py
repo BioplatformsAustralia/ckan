@@ -18,6 +18,7 @@ import ckan.lib.navl.dictization_functions as dictization_functions
 import ckan.lib.authenticator as authenticator
 import ckan.plugins as p
 
+import ckanapi
 import requests
 import os
 import json
@@ -167,7 +168,7 @@ class UserController(base.BaseController):
             'auth_user_obj': c.userobj
         }
 
-        user_id = {'id': c.userobj.id }
+        user_id = {'id': c.userobj.id}
         user_data = get_action('user_show')(user_details, user_id)
 
         organisations = []
@@ -235,8 +236,7 @@ class UserController(base.BaseController):
             "name": request_params['fullname'],
             "email": request_params['email'],
             "reason_for_request": request_params['request_reason'],
-            "project_of_interest": request_params['project_of_interest'],
-            "key": bpam_log_key,
+            "project_of_interest": request_params['project_of_interest']
         }
 
         email_body = "There is a new user registration request. \
@@ -249,7 +249,7 @@ class UserController(base.BaseController):
         \nProject of Interest: {project_of_interest} ".format(**details)
 
         MAILGUN_ENVIRON_VARS = ['MAILGUN_API_KEY', 'MAILGUN_API_DOMAIN', 'MAILGUN_SENDER_EMAIL', 'MAILGUN_RECEIVER_EMAIL']
-        MAILGUN_VARS = dict ((t, os.environ.get(t)) for t in MAILGUN_ENVIRON_VARS)
+        MAILGUN_VARS = dict((t, os.environ.get(t)) for t in MAILGUN_ENVIRON_VARS)
 
         if None in MAILGUN_VARS.values():
             logging.warning("The following mailgun api key is not set {}".format(key))
@@ -390,6 +390,27 @@ class UserController(base.BaseController):
             context['message'] = data_dict.get('log_message', '')
             captcha.check_recaptcha(request)
             user = get_action('user_create')(context, data_dict)
+
+            if request.params['project_of_interest'] == 'Australian Microbiome':
+                username = user['name']
+
+                base = os.environ.get('LOCAL_CKAN_API_URL')
+                ckan_api_key = os.environ.get('CKAN_API_KEY')
+                remote = ckanapi.RemoteCKAN(base)
+
+                data = {
+                    'id': 'australian-microbiome',
+                    'username': username,
+                    'role': 'member'
+                }
+
+                remote.call_action(
+                    'organization_member_create',
+                    data_dict=data,
+                    apikey=ckan_api_key,
+                    requests_kwargs={'verify': False}
+                )
+
         except NotAuthorized:
             abort(403, _('Unauthorized to create user %s') % '')
         except NotFound, e:
@@ -409,13 +430,14 @@ class UserController(base.BaseController):
             set_repoze_user(data_dict['name'])
 
             if request.params:
-                # TODO: FIX THIS HERE
-
                 if request.params['project_of_interest'] == 'Australian Microbiome':
-                    pass
+                    self.log_new_user_request_in_bpam(request.params)
+                    # NOTE: No need to do the second step of emailing to Zendesk.
 
-                self.email_new_user_request_to_helpdesk(request.params)
-                self.log_new_user_request_in_bpam(request.params)
+                    h.redirect_to(controller='user', action='me', __ckan_no_root=True)
+                else:
+                    self.log_new_user_request_in_bpam(request.params)
+                    self.email_new_user_request_to_helpdesk(request.params)
 
             return render('user/registration_success.html')
 
