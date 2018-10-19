@@ -43,6 +43,8 @@ UsernamePasswordError = logic.UsernamePasswordError
 DataError = dictization_functions.DataError
 unflatten = dictization_functions.unflatten
 
+AUTOREGISTER_PROJECTS = ['Australian Microbiome']
+
 
 def set_repoze_user(user_id):
     '''Set the repoze.who cookie to match a given user_id'''
@@ -272,8 +274,6 @@ class UserController(base.BaseController):
 
         recv_msg = json.loads(request.text)['message']
 
-        logging.warning(request.status_code)
-
         if request.status_code == 200:
             logging.warning("New user request sent successfuly.")
         else:
@@ -391,7 +391,7 @@ class UserController(base.BaseController):
             captcha.check_recaptcha(request)
             user = get_action('user_create')(context, data_dict)
 
-            if request.params['project_of_interest'] == 'Australian Microbiome':
+            if request.params['project_of_interest'] in AUTOREGISTER_PROJECTS:
                 username = user['name']
 
                 base = os.environ.get('LOCAL_CKAN_API_URL')
