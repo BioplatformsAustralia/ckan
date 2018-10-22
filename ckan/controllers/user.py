@@ -18,6 +18,7 @@ import ckan.lib.navl.dictization_functions as dictization_functions
 import ckan.lib.authenticator as authenticator
 import ckan.plugins as p
 
+import ckanapi
 import requests
 import os
 import json
@@ -41,6 +42,8 @@ UsernamePasswordError = logic.UsernamePasswordError
 
 DataError = dictization_functions.DataError
 unflatten = dictization_functions.unflatten
+
+AUTOREGISTER_PROJECTS = ['Australian Microbiome']
 
 
 def set_repoze_user(user_id):
@@ -167,7 +170,7 @@ class UserController(base.BaseController):
             'auth_user_obj': c.userobj
         }
 
-        user_id = {'id': c.userobj.id }
+        user_id = {'id': c.userobj.id}
         user_data = get_action('user_show')(user_details, user_id)
 
         organisations = []
@@ -224,19 +227,18 @@ class UserController(base.BaseController):
             logging.warning("Error writing to the log file. Dumping output to console.")
             logging.warning(log_message)
 
-    def email_new_user_details_using_mailgun_and_log_in_bpam(self, request_data):
+    def email_new_user_request_to_helpdesk(self, request_data):
+        '''
+        Send an email containing the user request details to Zendesk.
+        '''
         request_params = dict(request_data)
-
-        bpam_log_url = os.environ.get('BPAM_REGISTRATION_LOG_URL')
-        bpam_log_key = os.environ.get('BPAM_REGISTRATION_LOG_KEY')
 
         details = {
             "username": request_params['name'],
             "name": request_params['fullname'],
             "email": request_params['email'],
             "reason_for_request": request_params['request_reason'],
-            "project_of_interest": request_params['project_of_interest'],
-            "key": bpam_log_key,
+            "project_of_interest": request_params['project_of_interest']
         }
 
         email_body = "There is a new user registration request. \
@@ -248,19 +250,8 @@ class UserController(base.BaseController):
         \nReason for Request: {reason_for_request} \
         \nProject of Interest: {project_of_interest} ".format(**details)
 
-        # Send the user registration details to bpam for recording/tracking in the database
-
-        # Use the first url to test on a local dev set up
-        # r = requests.post('http://172.17.0.1/polls/record_registrations', data=details)
-        r = requests.post(bpam_log_url, data=details)
-        if r.status_code == 200:
-            logging.warning('User details sent to BPAM server successfully.')
-        else:
-            logging.warning('Error sending user details to BPAM server.')
-
-
         MAILGUN_ENVIRON_VARS = ['MAILGUN_API_KEY', 'MAILGUN_API_DOMAIN', 'MAILGUN_SENDER_EMAIL', 'MAILGUN_RECEIVER_EMAIL']
-        MAILGUN_VARS = dict ((t, os.environ.get(t)) for t in MAILGUN_ENVIRON_VARS)
+        MAILGUN_VARS = dict((t, os.environ.get(t)) for t in MAILGUN_ENVIRON_VARS)
 
         if None in MAILGUN_VARS.values():
             logging.warning("The following mailgun api key is not set {}".format(key))
@@ -291,6 +282,34 @@ class UserController(base.BaseController):
             logging.warning(recv_msg)
 
             self._generate_internal_logs(email_body)
+
+    def log_new_user_request_in_bpam(self, request_data):
+        '''
+        Send the user registration details to bpam for recording/tracking in the database.
+        '''
+
+        request_params = dict(request_data)
+
+        bpam_log_url = os.environ.get('BPAM_REGISTRATION_LOG_URL')
+        bpam_log_key = os.environ.get('BPAM_REGISTRATION_LOG_KEY')
+
+        details = {
+            "username": request_params['name'],
+            "name": request_params['fullname'],
+            "email": request_params['email'],
+            "reason_for_request": request_params['request_reason'],
+            "project_of_interest": request_params['project_of_interest'],
+            "key": bpam_log_key,
+        }
+
+        # Use the first url to test on a local dev set up
+        # r = requests.post('http://172.17.0.1/polls/record_registrations', data=details)
+        r = requests.post(bpam_log_url, data=details)
+
+        if r.status_code == 200:
+            logging.warning('User details sent to BPAM server successfully.')
+        else:
+            logging.warning('Error sending user details to BPAM server.')
 
     def new(self, data=None, errors=None, error_summary=None):
         '''GET to display a form for registering a new user.
@@ -371,6 +390,27 @@ class UserController(base.BaseController):
             context['message'] = data_dict.get('log_message', '')
             captcha.check_recaptcha(request)
             user = get_action('user_create')(context, data_dict)
+
+            if request.params['project_of_interest'] in AUTOREGISTER_PROJECTS:
+                username = user['name']
+
+                base = os.environ.get('LOCAL_CKAN_API_URL')
+                ckan_api_key = os.environ.get('CKAN_API_KEY')
+                remote = ckanapi.RemoteCKAN(base)
+
+                data = {
+                    'id': 'australian-microbiome',
+                    'username': username,
+                    'role': 'member'
+                }
+
+                remote.call_action(
+                    'organization_member_create',
+                    data_dict=data,
+                    apikey=ckan_api_key,
+                    requests_kwargs={'verify': False}
+                )
+
         except NotAuthorized:
             abort(403, _('Unauthorized to create user %s') % '')
         except NotFound, e:
@@ -390,12 +430,20 @@ class UserController(base.BaseController):
             set_repoze_user(data_dict['name'])
 
             if request.params:
-                self.email_new_user_details_using_mailgun_and_log_in_bpam(request.params)
+                if request.params['project_of_interest'] == 'Australian Microbiome':
+                    self.log_new_user_request_in_bpam(request.params)
+                    # NOTE: No need to do the second step of emailing to Zendesk.
+
+                    h.redirect_to(controller='user', action='me', __ckan_no_root=True)
+                else:
+                    self.log_new_user_request_in_bpam(request.params)
+                    self.email_new_user_request_to_helpdesk(request.params)
 
             return render('user/registration_success.html')
 
             # We do not want to redirect the user here.
             # h.redirect_to(controller='user', action='me', __ckan_no_root=True)
+
         else:
             # #1799 User has managed to register whilst logged in - warn user
             # they are not re-logged in as new user.
