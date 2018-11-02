@@ -43,7 +43,13 @@ UsernamePasswordError = logic.UsernamePasswordError
 DataError = dictization_functions.DataError
 unflatten = dictization_functions.unflatten
 
-AUTOREGISTER_PROJECTS = ['Australian Microbiome']
+AUTOREGISTER_PROJECTS = {
+        'Australian Microbiome': 'australian-microbiome',
+        'Great Barrier Reef': 'bpa-great-barrier-reef',
+        'Wheat Pathogen Transcript': 'bpa-wheat-pathogens-transcript',
+        'Wheat Pathogens Genomes': 'bpa-wheat-pathogens-genomes',
+        'Wheat Cultivars': 'bpa-wheat-cultivars'
+}
 
 
 def set_repoze_user(user_id):
@@ -179,7 +185,6 @@ class UserController(base.BaseController):
         for uo in user_organisations:
             organisations.append(uo['name'])
 
-        # Note: the Ausmicro org name on prod is: 'australian-microbiome'
         data_portion = {
             'email': user_data['email'],
             'timestamp': time.time(),
@@ -390,8 +395,8 @@ class UserController(base.BaseController):
             context['message'] = data_dict.get('log_message', '')
             captcha.check_recaptcha(request)
             user = get_action('user_create')(context, data_dict)
-
-            if request.params['project_of_interest'] in AUTOREGISTER_PROJECTS:
+            project_of_interest = request.params['project_of_interest']
+            if project_of_interest in AUTOREGISTER_PROJECTS:
                 username = user['name']
 
                 base = os.environ.get('LOCAL_CKAN_API_URL')
@@ -399,7 +404,7 @@ class UserController(base.BaseController):
                 remote = ckanapi.RemoteCKAN(base)
 
                 data = {
-                    'id': 'australian-microbiome',
+                    'id': AUTOREGISTER_PROJECTS[project_of_interest],
                     'username': username,
                     'role': 'member'
                 }
@@ -430,7 +435,7 @@ class UserController(base.BaseController):
             set_repoze_user(data_dict['name'])
 
             if request.params:
-                if request.params['project_of_interest'] == 'Australian Microbiome':
+                if request.params['project_of_interest'] in AUTOREGISTER_PROJECTS:
                     self.log_new_user_request_in_bpam(request.params)
                     # NOTE: No need to do the second step of emailing to Zendesk.
 
