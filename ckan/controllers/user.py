@@ -160,13 +160,6 @@ class UserController(base.BaseController):
 
         return render('user/read.html')
 
-    def me(self, locale=None):
-        if not c.user:
-            h.redirect_to(locale=locale, controller='user', action='login',
-                          id=None)
-        user_ref = c.userobj.get_reference_preferred_for_uri()
-        h.redirect_to(locale=locale, controller='user', action='dashboard')
-
     def check_permissions(self):
         if not c.user:
             abort(403, 'Please log into CKAN.')
@@ -621,6 +614,13 @@ class UserController(base.BaseController):
                               action='login', came_from=came_from)
             else:
                 return self.login(error=err)
+
+    def me(self, locale=None):
+        if not c.user:
+            h.redirect_to(locale=locale, controller='user', action='login',
+                          id=None)
+        user_ref = c.userobj.get_reference_preferred_for_uri()
+        h.redirect_to('/')
 
     def logout(self):
         # Do any plugin logout stuff
