@@ -6,7 +6,7 @@ import string
 from nose.tools import assert_equal, assert_true, assert_false, assert_in
 from bs4 import BeautifulSoup
 
-from routes import url_for
+from ckan.lib.helpers import url_for
 
 import ckan.tests.helpers as helpers
 from ckan.tests import factories
@@ -124,7 +124,7 @@ class TestTagRead(helpers.FunctionalTestBase):
         tag_url = url_for(controller='tag', action='read', id='find-me')
         tag_response = app.get(tag_url, status=302)
         assert_equal(tag_response.headers['Location'],
-                     'http://localhost/dataset?tags=find-me')
+                     'http://test.ckan.net/dataset?tags=find-me')
 
     def test_tag_read_not_found(self):
         '''Attempting access to non-existing tag returns a 404'''
