@@ -27,9 +27,10 @@ from ckan import (__version__, __description__, __long_description__,
 def parse_version(s):
     return map(int, s.split('.'))
 
+
 HERE = os.path.dirname(__file__)
 with open(os.path.join(HERE, 'requirement-setuptools.txt')) as f:
-        setuptools_requirement = f.read().strip()
+    setuptools_requirement = f.read().strip()
 min_setuptools_version = parse_version(setuptools_requirement.split('==')[1])
 if parse_version(setuptools_version) < min_setuptools_version:
     raise AssertionError(
@@ -254,7 +255,7 @@ setup(
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2 :: Only',
-        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3 :: Only',
+        'Programming Language :: Python :: 3.7',
     ],
 )
