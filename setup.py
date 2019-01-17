@@ -32,6 +32,8 @@ HERE = os.path.dirname(__file__)
 with open(os.path.join(HERE, 'requirement-setuptools.txt')) as f:
     setuptools_requirement = f.read().strip()
 min_setuptools_version = parse_version(setuptools_requirement.split('==')[1])
+print(min_setuptools_version)
+print(parse_version(setuptools_version))
 if parse_version(setuptools_version) < min_setuptools_version:
     raise AssertionError(
         'setuptools version error\n'
@@ -254,7 +256,7 @@ setup(
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 3 :: Only',
-        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 2 :: Only',
+        'Programming Language :: Python :: 2.7',
     ],
 )
