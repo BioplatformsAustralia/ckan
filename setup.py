@@ -221,7 +221,6 @@ setup(
     include_package_data=True,
     packages=find_packages(exclude=['ez_setup']),
     namespace_packages=['ckanext', 'ckanext.stats'],
-    include_package_data=True,
     package_data={'ckan': [
         'i18n/*/LC_MESSAGES/*.mo',
         'migration/migrate.cfg',
