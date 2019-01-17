@@ -449,21 +449,6 @@ v2.6.2 2017-03-22
 v2.6.1 2017-02-22
 =================
 
-<<<<<<< HEAD
- * Fix DataPusher being fired multiple times (#3245)
- * Use the url_for() helper for datapusher URLs (#2866)
- * Resource creation date use datetime.utcnow() (#3447)
- * Fix locale error when using fix ckan.root_path
- * `render_markdown` breaks links with ampersands
- * Check group name and id during package creation
- * Use utcnow() on dashboard_mark_activities_old (#3373)
- * Fix encoding error on DataStore exception
- * Datastore doesn't add site_url to resource created via API (#3189)
- * Fix memberships after user deletion (#3265)
- * Remove idle database connection (#3260)
- * Fix package_owner_org_update action when called via the API (#2661)
- * Fix French locale (#3327)
-=======
  * Fix DataPusher being fired multiple times (`#3245 <https://github.com/ckan/ckan/issues/3245>`_)
  * Use the url_for() helper for datapusher URLs (`#2866 <https://github.com/ckan/ckan/issues/2866>`_)
  * Resource creation date use datetime.utcnow() (`#3447 <https://github.com/ckan/ckan/issues/3447>`_)
@@ -477,7 +462,6 @@ v2.6.1 2017-02-22
  * Remove idle database connection (`#3260 <https://github.com/ckan/ckan/issues/3260>`_)
  * Fix package_owner_org_update action when called via the API (`#2661 <https://github.com/ckan/ckan/issues/2661>`_)
  * Fix French locale (`#3327 <https://github.com/ckan/ckan/issues/3327>`_)
->>>>>>> ckan-2.8.2
  * Updated translations
 
 v2.6.0 2016-11-02
@@ -490,11 +474,7 @@ Note: This version requires a requirements upgrade on source installations
 Note: This version requires a database upgrade
 
 Note: This version does not require a Solr schema upgrade (You may want to
-<<<<<<< HEAD
-         upgrade the schema if you want to target Solr>=5, see #2914)
-=======
          upgrade the schema if you want to target Solr>=5, see `#2914 <https://github.com/ckan/ckan/issues/2914>`_)
->>>>>>> ckan-2.8.2
 
 Major:
  * Private datasets are now included in the default dataset search results (`#3191 <https://github.com/ckan/ckan/pull/3191>`_)
@@ -873,8 +853,6 @@ v2.5.0 2015-12-17
 
 Cancelled release
 
-<<<<<<< HEAD
-=======
 v2.4.9 2017-09-27
 =================
 
@@ -909,7 +887,6 @@ v2.4.7 2017-03-22
 * Tag fix for group/organization pages (#3460)
 * Fix for package_search context (#3489)
 
->>>>>>> ckan-2.8.2
 v2.4.6 2017-02-22
 =================
 

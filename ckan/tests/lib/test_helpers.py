@@ -361,8 +361,6 @@ class TestHelpersRenderMarkdown(object):
         output = u'<p><img alt="image" src="/image.png"></p>'
         eq_(h.render_markdown(data), output)
 
-<<<<<<< HEAD
-=======
     def test_bold(self):
         data = u'Something **important**'
         output = u'<p>Something <strong>important</strong></p>'
@@ -461,7 +459,6 @@ class TestHelpersRenderMarkdown(object):
         output = '<p>somelink</p>'
         eq_(h.render_markdown(data), output)
 
->>>>>>> ckan-2.8.2
 
 class TestHelpersRemoveLineBreaks(object):
 
