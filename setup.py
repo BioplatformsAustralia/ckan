@@ -217,7 +217,6 @@ setup(
     keywords='data packaging component tool server',
     long_description=__long_description__,
     zip_safe=False,
-    include_package_data=True,
     packages=find_packages(exclude=['ez_setup']),
     namespace_packages=['ckanext', 'ckanext.stats'],
     include_package_data=True,
