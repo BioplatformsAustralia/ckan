@@ -6,21 +6,21 @@ MAINTAINER Open Knowledge
 RUN apt-get -q -y update \
     && DEBIAN_FRONTEND=noninteractive apt-get -q -y upgrade \
     && apt-get -q -y install \
-        python-dev \
-        python-pip \
-        python-virtualenv \
-        python-wheel \
-        libpq-dev \
-        libxml2-dev \
-        libxslt-dev \
-        libgeos-dev \
-        libssl-dev \
-        libffi-dev \
-        postgresql-client \
-        build-essential \
-        git-core \
-        vim \
-        wget \
+    python-dev \
+    python-pip \
+    python-virtualenv \
+    python-wheel \
+    libpq-dev \
+    libxml2-dev \
+    libxslt-dev \
+    libgeos-dev \
+    libssl-dev \
+    libffi-dev \
+    postgresql-client \
+    build-essential \
+    git-core \
+    vim \
+    wget \
     && apt-get -q clean \
     && rm -rf /var/lib/apt/lists/*
 

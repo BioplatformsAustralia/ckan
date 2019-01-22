@@ -507,8 +507,6 @@ class TestUserDelete(object):
         user_obj = model.User.get(user[u'id'])
         assert_equals(user_obj.state, u'deleted')
 
-<<<<<<< HEAD
-=======
     def test_user_delete_but_user_doesnt_exist(self):
         context = {}
         params = {u'id': 'unknown'}
@@ -518,7 +516,6 @@ class TestUserDelete(object):
             helpers.call_action,
             u'user_delete', context, **params)
 
->>>>>>> ckan-2.8.2
     def test_user_delete_removes_memberships(self):
         user = factories.User()
         factories.Organization(
@@ -570,8 +567,6 @@ class TestUserDelete(object):
 
         assert_equals([m.state for m in user_memberships],
                       [u'deleted', u'deleted'])
-<<<<<<< HEAD
-=======
 
 
 class TestJobClear(helpers.FunctionalRQTestBase):
@@ -626,4 +621,3 @@ class TestJobCancel(helpers.FunctionalRQTestBase):
     @raises(logic.NotFound)
     def test_not_existing_job(self):
         helpers.call_action(u'job_cancel', id=u'does-not-exist')
->>>>>>> ckan-2.8.2

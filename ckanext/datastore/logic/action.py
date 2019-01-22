@@ -148,16 +148,9 @@ def datastore_create(context, data_dict):
 
     try:
 
-
-<< << << < HEAD
-        result = db.create(context, data_dict)
-    except db.InvalidDataError as err:
-        raise p.toolkit.ValidationError(unicode(err))
-=======
         result = backend.create(context, data_dict)
     except InvalidDataError as err:
         raise p.toolkit.ValidationError(text_type(err))
->>>>>>> ckan-2.8.2
 
     # Set the datastore_active flag on the resource if necessary
     model = _get_or_bust(context, 'model')
@@ -201,7 +194,7 @@ def datastore_run_triggers(context, data_dict):
     except sqlalchemy.exc.DatabaseError as err:
         message = err.args[0].split('\n')[0].decode('utf8')
         raise p.toolkit.ValidationError({
-                u'records': [message.split(u') ', 1)[-1]]})
+            u'records': [message.split(u') ', 1)[-1]]})
     return results.rowcount
 
 
