@@ -218,9 +218,16 @@ setup(
     keywords='data packaging component tool server',
     long_description=__long_description__,
     zip_safe=False,
-    include_package_data=True,
     packages=find_packages(exclude=['ez_setup']),
     namespace_packages=['ckanext', 'ckanext.stats'],
+    include_package_data=True,
+    package_data={'ckan': [
+        'i18n/*/LC_MESSAGES/*.mo',
+        'migration/migrate.cfg',
+        'migration/README',
+        'migration/tests/test_dumps/*',
+        'migration/versions/*',
+    ]},
     message_extractors={
         'ckan': [
             ('**.py', 'python', None),
