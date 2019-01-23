@@ -159,12 +159,13 @@ class UserController(base.BaseController):
                 context, {'id': c.user_dict['id']})
 
         return render('user/read.html')
-    
+
     def me(self, locale=None):
         if not c.user:
             h.redirect_to(locale=locale, controller='user', action='login',
                           id=None)
         user_ref = c.userobj.get_reference_preferred_for_uri()
+        # login redirect to homepage
         h.redirect_to('/')
 
     def check_permissions(self):
