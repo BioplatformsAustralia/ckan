@@ -1,61 +1,61 @@
-FROM phusion/baseimage:0.9.15
+# See CKAN docs on installation from Docker Compose on usage
+FROM debian:jessie
 MAINTAINER Open Knowledge
 
-# Disable SSH
-RUN rm -rf /etc/service/sshd /etc/my_init.d/00_regen_ssh_host_keys.sh
+# Install required system packages
+RUN apt-get -q -y update \
+    && DEBIAN_FRONTEND=noninteractive apt-get -q -y upgrade \
+    && apt-get -q -y install \
+    python-dev \
+    python-pip \
+    python-virtualenv \
+    python-wheel \
+    libpq-dev \
+    libxml2-dev \
+    libxslt-dev \
+    libgeos-dev \
+    libssl-dev \
+    libffi-dev \
+    postgresql-client \
+    build-essential \
+    git-core \
+    vim \
+    wget \
+    && apt-get -q clean \
+    && rm -rf /var/lib/apt/lists/*
 
-ENV HOME /root
-ENV CKAN_HOME /usr/lib/ckan/default
-ENV CKAN_CONFIG /etc/ckan/default
-ENV CKAN_DATA /var/lib/ckan
+# Define environment variables
+ENV CKAN_HOME /usr/lib/ckan
+ENV CKAN_VENV $CKAN_HOME/venv
+ENV CKAN_CONFIG /etc/ckan
+ENV CKAN_STORAGE_PATH=/var/lib/ckan
 
-# Install required packages
-RUN apt-get -q -y update
-RUN DEBIAN_FRONTEND=noninteractive apt-get -q -y install \
-        python-minimal \
-        python-dev \
-        python-virtualenv \
-        libevent-dev \
-        libpq-dev \
-        nginx-light \
-        apache2 \
-        libapache2-mod-wsgi \
-        postfix \
-        build-essential
+# Build-time variables specified by docker-compose.yml / .env
+ARG CKAN_SITE_URL
 
-# Install CKAN
-RUN virtualenv $CKAN_HOME
-RUN mkdir -p $CKAN_HOME $CKAN_CONFIG $CKAN_DATA
-RUN chown www-data:www-data $CKAN_DATA
+# Create ckan user
+RUN useradd -r -u 900 -m -c "ckan account" -d $CKAN_HOME -s /bin/false ckan
 
-ADD ./requirements.txt $CKAN_HOME/src/ckan/requirements.txt
-RUN $CKAN_HOME/bin/pip install -r $CKAN_HOME/src/ckan/requirements.txt
-ADD . $CKAN_HOME/src/ckan/
-RUN $CKAN_HOME/bin/pip install -e $CKAN_HOME/src/ckan/
-RUN ln -s $CKAN_HOME/src/ckan/ckan/config/who.ini $CKAN_CONFIG/who.ini
-ADD ./contrib/docker/apache.wsgi $CKAN_CONFIG/apache.wsgi
+# Setup virtual environment for CKAN
+RUN mkdir -p $CKAN_VENV $CKAN_CONFIG $CKAN_STORAGE_PATH && \
+    virtualenv $CKAN_VENV && \
+    ln -s $CKAN_VENV/bin/pip /usr/local/bin/ckan-pip &&\
+    ln -s $CKAN_VENV/bin/paster /usr/local/bin/ckan-paster
 
-# Configure apache
-ADD ./contrib/docker/apache.conf /etc/apache2/sites-available/ckan_default.conf
-RUN echo "Listen 8080" > /etc/apache2/ports.conf
-RUN a2ensite ckan_default
-RUN a2dissite 000-default
+# Setup CKAN
+ADD . $CKAN_VENV/src/ckan/
+RUN ckan-pip install -U pip && \
+    ckan-pip install --upgrade --no-cache-dir -r $CKAN_VENV/src/ckan/requirement-setuptools.txt && \
+    ckan-pip install --upgrade --no-cache-dir -r $CKAN_VENV/src/ckan/requirements.txt && \
+    ckan-pip install -e $CKAN_VENV/src/ckan/ && \
+    ln -s $CKAN_VENV/src/ckan/ckan/config/who.ini $CKAN_CONFIG/who.ini && \
+    cp -v $CKAN_VENV/src/ckan/contrib/docker/ckan-entrypoint.sh /ckan-entrypoint.sh && \
+    chmod +x /ckan-entrypoint.sh && \
+    chown -R ckan:ckan $CKAN_HOME $CKAN_VENV $CKAN_CONFIG $CKAN_STORAGE_PATH
 
-# Configure nginx
-ADD ./contrib/docker/nginx.conf /etc/nginx/nginx.conf
-RUN mkdir /var/cache/nginx
+ENTRYPOINT ["/ckan-entrypoint.sh"]
 
-# Configure postfix
-ADD ./contrib/docker/main.cf /etc/postfix/main.cf
+USER ckan
+EXPOSE 5000
 
-# Configure runit
-ADD ./contrib/docker/my_init.d /etc/my_init.d
-ADD ./contrib/docker/svc /etc/service
-CMD ["/sbin/my_init"]
-
-# Volumes
-VOLUME ["/etc/ckan/default"]
-VOLUME ["/var/lib/ckan"]
-EXPOSE 80
-
-RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+CMD ["ckan-paster","serve","/etc/ckan/production.ini"]

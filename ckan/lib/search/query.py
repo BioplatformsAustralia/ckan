@@ -49,7 +49,7 @@ def convert_legacy_parameters_to_solr(legacy_params):
     non_solr_params = set(legacy_params.keys()) - VALID_SOLR_PARAMETERS
     for search_key in non_solr_params:
         value_obj = legacy_params[search_key]
-        value = value_obj.replace('+', ' ') if isinstance(value_obj, basestring) else value_obj
+        value = value_obj.replace('+', ' ') if isinstance(value_obj, six.string_types) else value_obj
         if search_key == 'all_fields':
             if value:
                 solr_params['fl'] = '*'
@@ -62,7 +62,7 @@ def convert_legacy_parameters_to_solr(legacy_params):
         elif search_key == 'tags':
             if isinstance(value_obj, list):
                 tag_list = value_obj
-            elif isinstance(value_obj, basestring):
+            elif isinstance(value_obj, six.string_types):
                 tag_list = [value_obj]
             else:
                 raise SearchQueryError('Was expecting either a string or JSON list for the tags parameter: %r' % value)
@@ -173,7 +173,7 @@ class TagSearchQuery(SearchQuery):
         else:
             options.update(kwargs)
 
-        if isinstance(query, basestring):
+        if isinstance(query, six.string_types):
             query = [query]
 
         query = query[:] # don't alter caller's query list.
@@ -220,7 +220,7 @@ class ResourceSearchQuery(SearchQuery):
         # action.
         query = []
         for field, terms in fields.items():
-            if isinstance(terms, basestring):
+            if isinstance(terms, six.string_types):
                 terms = terms.split()
             for term in terms:
                 query.append(':'.join([field, term]))
@@ -266,11 +266,17 @@ class PackageSearchQuery(SearchQuery):
             'wt': 'json',
             'fq': 'site_id:"%s"' % config.get('ckan.site_id')}
 
+        try:
+            if query['q'].startswith('{!'):
+                raise SearchError('Local parameters are not supported.')
+        except KeyError:
+            pass
+
         conn = make_connection(decode_dates=False)
         log.debug('Package query: %r' % query)
         try:
             solr_response = conn.search(**query)
-        except pysolr.SolrError, e:
+        except pysolr.SolrError as e:
             raise SearchError('SOLR returned an error running query: %r Error: %r' %
                               (query, e))
 
@@ -280,12 +286,17 @@ class PackageSearchQuery(SearchQuery):
             return solr_response.docs[0]
 
 
-    def run(self, query):
+    def run(self, query, permission_labels=None, **kwargs):
         '''
         Performs a dataset search using the given query.
 
-        @param query - dictionary with keys like: q, fq, sort, rows, facet
-        @return - dictionary with keys results and count
+        :param query: dictionary with keys like: q, fq, sort, rows, facet
+        :type query: dict
+        :param permission_labels: filter results to those that include at
+            least one of these labels. None to not filter (return everything)
+        :type permission_labels: list of unicode strings; or None
+
+        :returns: dictionary with keys results and count
 
         May raise SearchQueryError or SearchError.
         '''
@@ -310,18 +321,23 @@ class PackageSearchQuery(SearchQuery):
             rows_to_query = rows_to_return
         query['rows'] = rows_to_query
 
+        fq = []
+        if 'fq' in query:
+            fq.append(query['fq'])
+        fq.extend(query.get('fq_list', []))
+
         # show only results from this CKAN instance
-        fq = query.get('fq', '')
-        if not '+site_id:' in fq:
-            fq += ' +site_id:"%s"' % config.get('ckan.site_id')
+        fq.append('+site_id:%s' % solr_literal(config.get('ckan.site_id')))
 
         # filter for package status
-        if not '+state:' in fq:
-            fq += " +state:active"
-        query['fq'] = [fq]
+        if not '+state:' in query.get('fq', ''):
+            fq.append('+state:active')
 
-        fq_list = query.get('fq_list', [])
-        query['fq'].extend(fq_list)
+        # only return things we should be able to see
+        if permission_labels is not None:
+            fq.append('+permission_labels:(%s)' % ' OR '.join(
+                solr_literal(p) for p in permission_labels))
+        query['fq'] = fq
 
         # faceting
         query['facet'] = query.get('facet', 'true')
@@ -344,11 +360,17 @@ class PackageSearchQuery(SearchQuery):
             query['mm'] = query.get('mm', '2<-1 5<80%')
             query['qf'] = query.get('qf', QUERY_FIELDS)
 
+        try:
+            if query['q'].startswith('{!'):
+                raise SearchError('Local parameters are not supported.')
+        except KeyError:
+            pass
+
         conn = make_connection(decode_dates=False)
         log.debug('Package query: %r' % query)
         try:
             solr_response = conn.search(**query)
-        except pysolr.SolrError, e:
+        except pysolr.SolrError as e:
             # Error with the sort parameter.  You see slightly different
             # error messages depending on whether the SOLR JSON comes back
             # or Jetty gets in the way converting it to HTML - not sure why
@@ -387,3 +409,13 @@ class PackageSearchQuery(SearchQuery):
             self.facets[field] = dict(zip(values[0::2], values[1::2]))
 
         return {'results': self.results, 'count': self.count}
+
+
+def solr_literal(t):
+    '''
+    return a safe literal string for a solr query. Instead of escaping
+    each of + - && || ! ( ) { } [ ] ^ " ~ * ? : \ / we're just dropping
+    double quotes -- this method currently only used by tokens like site_id
+    and permission labels.
+    '''
+    return u'"' + t.replace(u'"', u'') + u'"'

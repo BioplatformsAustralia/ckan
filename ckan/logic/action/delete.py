@@ -2,8 +2,11 @@
 
 '''API functions for deleting data from CKAN.'''
 
+import logging
+
 import sqlalchemy as sqla
 
+import ckan.lib.jobs as jobs
 import ckan.logic
 import ckan.logic.action
 import ckan.plugins as plugins
@@ -11,6 +14,9 @@ import ckan.lib.dictization.model_dictize as model_dictize
 from ckan import authz
 
 from ckan.common import _
+
+
+log = logging.getLogger('ckan.logic')
 
 validate = ckan.lib.navl.dictization_functions.validate
 
@@ -39,13 +45,13 @@ def user_delete(context, data_dict):
     user_id = _get_or_bust(data_dict, 'id')
     user = model.User.get(user_id)
 
+    if user is None:
+        raise NotFound('User "{id}" was not found.'.format(id=user_id))
+
     # New revision, needed by the member table
     rev = model.repo.new_revision()
     rev.author = context['user']
     rev.message = _(u' Delete User: {0}').format(user.name)
-
-    if user is None:
-        raise NotFound('User "{id}" was not found.'.format(id=user_id))
 
     user.delete()
 
@@ -180,7 +186,7 @@ def resource_delete(context, data_dict):
                 r['id'] == id]
     try:
         pkg_dict = _get_action('package_update')(context, pkg_dict)
-    except ValidationError, e:
+    except ValidationError as e:
         errors = e.error_dict['resources'][-1]
         raise ValidationError(errors)
 
@@ -340,12 +346,26 @@ def _group_or_org_delete(context, data_dict, is_org=False):
     else:
         _check_access('group_delete', context, data_dict)
 
-    # organization delete will delete all datasets for that org
-    # FIXME this gets all the packages the user can see which generally will
-    # be all but this is only a fluke so we should fix this properly
+    # organization delete will not occure whilke all datasets for that org are
+    # not deleted
     if is_org:
-        for pkg in group.packages(with_private=True):
-            _get_action('package_delete')(context, {'id': pkg.id})
+        datasets = model.Session.query(model.Package) \
+                        .filter_by(owner_org=group.id) \
+                        .filter(model.Package.state != 'deleted') \
+                        .count()
+        if datasets:
+            if not authz.check_config_permission('ckan.auth.create_unowned_dataset'):
+                raise ValidationError(_('Organization cannot be deleted while it '
+                                      'still has datasets'))
+
+            pkg_table = model.package_table
+            # using Core SQLA instead of the ORM should be faster
+            model.Session.execute(
+                pkg_table.update().where(
+                    sqla.and_(pkg_table.c.owner_org == group.id,
+                              pkg_table.c.state != 'deleted')
+                ).values(owner_org=None)
+            )
 
     rev = model.repo.new_revision()
     rev.author = user
@@ -385,7 +405,9 @@ def group_delete(context, data_dict):
 def organization_delete(context, data_dict):
     '''Delete an organization.
 
-    You must be authorized to delete the organization.
+    You must be authorized to delete the organization
+    and no datasets should belong to the organization
+    unless 'ckan.auth.create_unowned_dataset=True'
 
     :param id: the name or id of the organization
     :type id: string
@@ -406,7 +428,7 @@ def _group_or_org_purge(context, data_dict, is_org=False):
 
     :param is_org: you should pass is_org=True if purging an organization,
         otherwise False (optional, default: False)
-    :type is_org: boolean
+    :type is_org: bool
 
     '''
     model = context['model']
@@ -576,19 +598,6 @@ def tag_delete(context, data_dict):
     tag_obj.delete()
     model.repo.commit()
 
-def package_relationship_delete_rest(context, data_dict):
-
-    # rename keys
-    key_map = {'id': 'subject',
-               'id2': 'object',
-               'rel': 'type'}
-    # We want 'destructive', so that the value of the subject,
-    # object and rel in the URI overwrite any values for these
-    # in params. This is because you are not allowed to change
-    # these values.
-    data_dict = ckan.logic.action.rename_keys(data_dict, key_map, destructive=True)
-
-    package_relationship_delete(context, data_dict)
 
 def _unfollow(context, data_dict, schema, FollowerClass):
     model = context['model']
@@ -701,3 +710,48 @@ def unfollow_group(context, data_dict):
             ckan.logic.schema.default_follow_group_schema())
     _unfollow(context, data_dict, schema,
             context['model'].UserFollowingGroup)
+
+
+@ckan.logic.validate(ckan.logic.schema.job_clear_schema)
+def job_clear(context, data_dict):
+    '''Clear background job queues.
+
+    Does not affect jobs that are already being processed.
+
+    :param list queues: The queues to clear. If not given then ALL
+        queues are cleared.
+
+    :returns: The cleared queues.
+    :rtype: list
+
+    .. versionadded:: 2.7
+    '''
+    _check_access(u'job_clear', context, data_dict)
+    queues = data_dict.get(u'queues')
+    if queues:
+        queues = [jobs.get_queue(q) for q in queues]
+    else:
+        queues = jobs.get_all_queues()
+    names = [jobs.remove_queue_name_prefix(queue.name) for queue in queues]
+    for queue, name in zip(queues, names):
+        queue.empty()
+        log.info(u'Cleared background job queue "{}"'.format(name))
+    return names
+
+
+def job_cancel(context, data_dict):
+    '''Cancel a queued background job.
+
+    Removes the job from the queue and deletes it.
+
+    :param string id: The ID of the background job.
+
+    .. versionadded:: 2.7
+    '''
+    _check_access(u'job_cancel', context, data_dict)
+    id = _get_or_bust(data_dict, u'id')
+    try:
+        jobs.job_from_id(id).delete()
+        log.info(u'Cancelled background job {}'.format(id))
+    except KeyError:
+        raise NotFound

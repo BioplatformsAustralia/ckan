@@ -7,7 +7,6 @@ import warnings
 import xml.dom.minidom
 import urllib2
 
-from ckan.common import config
 from paste.deploy.converters import asbool
 
 import ckan.model as model
@@ -23,7 +22,6 @@ from query import (TagSearchQuery, ResourceSearchQuery, PackageSearchQuery,
 log = logging.getLogger(__name__)
 
 
-
 def text_traceback():
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -32,9 +30,8 @@ def text_traceback():
         ).strip()
     return res
 
-SIMPLE_SEARCH = asbool(config.get('ckan.simple_search', False))
 
-SUPPORTED_SCHEMA_VERSIONS = ['2.3']
+SUPPORTED_SCHEMA_VERSIONS = ['2.8']
 
 DEFAULT_OPTIONS = {
     'limit': 20,
@@ -60,11 +57,6 @@ _QUERIES = {
 
 SOLR_SCHEMA_FILE_OFFSET = '/admin/file/?file=schema.xml'
 
-if SIMPLE_SEARCH:
-    import sql as sql
-    _INDICES['package'] = NoopSearchIndex
-    _QUERIES['package'] = sql.PackageSearchQuery
-
 
 def _normalize_type(_type):
     if isinstance(_type, model.domain_object.DomainObject):
@@ -80,7 +72,7 @@ def index_for(_type):
     try:
         _type_n = _normalize_type(_type)
         return _INDICES[_type_n]()
-    except KeyError, ke:
+    except KeyError as ke:
         log.warn("Unknown search type: %s" % _type)
         return NoopSearchIndex()
 
@@ -91,7 +83,7 @@ def query_for(_type):
     try:
         _type_n = _normalize_type(_type)
         return _QUERIES[_type_n]()
-    except KeyError, ke:
+    except KeyError as ke:
         raise SearchError("Unknown search type: %s" % _type)
 
 
@@ -107,7 +99,7 @@ def dispatch_by_operation(entity_type, entity, operation):
             index.remove_dict(entity)
         else:
             log.warn("Unknown operation: %s" % operation)
-    except Exception, ex:
+    except Exception as ex:
         log.exception(ex)
         # we really need to know about any exceptions, so reraise
         # (see #1172)
@@ -201,7 +193,7 @@ def rebuild(package_id=None, only_missing=False, force=False, refresh=False,
                     ),
                     defer_commit
                 )
-            except Exception, e:
+            except Exception as e:
                 log.error(u'Error while indexing dataset %s: %s' %
                           (pkg_id, repr(e)))
                 if force:
@@ -219,6 +211,7 @@ def commit():
     package_index.commit()
     log.info('Commited pending changes on the search index')
 
+
 def check():
     package_query = query_for(model.Package)
 
@@ -228,11 +221,11 @@ def check():
     pkgs = set([pkg.id for pkg in pkgs_q])
     indexed_pkgs = set(package_query.get_all_entity_ids(max_results=len(pkgs)))
     pkgs_not_indexed = pkgs - indexed_pkgs
-    print 'Packages not indexed = %i out of %i' % (len(pkgs_not_indexed),
-                                                   len(pkgs))
+    print('Packages not indexed = %i out of %i' % (len(pkgs_not_indexed),
+                                                   len(pkgs)))
     for pkg_id in pkgs_not_indexed:
         pkg = model.Session.query(model.Package).get(pkg_id)
-        print pkg.revision.timestamp.strftime('%Y-%m-%d'), pkg.name
+        print(pkg.revision.timestamp.strftime('%Y-%m-%d'), pkg.name)
 
 
 def show(package_reference):
@@ -249,10 +242,9 @@ def clear(package_reference):
 
 
 def clear_all():
-    if not SIMPLE_SEARCH:
-        package_index = index_for(model.Package)
-        log.debug("Clearing search index...")
-        package_index.clear()
+    package_index = index_for(model.Package)
+    log.debug("Clearing search index...")
+    package_index.clear()
 
 
 def check_solr_schema_version(schema_file=None):
@@ -275,11 +267,6 @@ def check_solr_schema_version(schema_file=None):
         :schema_file: Absolute path to an alternative schema file. Should
                       be only used for testing purposes (Default is None)
     '''
-
-
-    if SIMPLE_SEARCH:
-        # Not using the SOLR search backend
-        return False
 
     if not is_available():
         # Something is wrong with the SOLR server

@@ -4,7 +4,7 @@ from nose.tools import assert_equal
 from pylons.test import pylonsapp
 import paste.fixture
 
-from routes import url_for as url_for
+from ckan.lib.helpers import url_for as url_for
 
 import ckan.tests.helpers as helpers
 
@@ -18,7 +18,7 @@ class TestUtil(helpers.FunctionalTestBase):
             status=302,
         )
         assert_equal(response.headers.get('Location'),
-                     'http://localhost/dataset')
+                     'http://test.ckan.net/dataset')
 
     def test_redirect_external(self):
         app = self._get_test_app()

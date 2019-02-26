@@ -44,12 +44,18 @@ class _Toolkit(object):
         'literal',
         # get logic action function
         'get_action',
+        # get flask/pylons endpoint fragments
+        'get_endpoint',
+        # decorator for chained action
+        'chained_action',
         # get navl schema converter
         'get_converter',
         # get navl schema validator
         'get_validator',
         # check logic function authorisation
         'check_access',
+        # decorator for chained authentication functions
+        'chained_auth_function',
         # implements validate method with navl schema
         'navl_validate',
         # placeholder for missing values for validation
@@ -66,8 +72,10 @@ class _Toolkit(object):
         'StopOnError',
         # validation invalid exception
         'Invalid',
-        # class for providing cli interfaces
+        # old class for providing CLI interfaces
         'CkanCommand',
+        # function for initializing CLI interfaces
+        'load_config',
         # base class for IDatasetForm plugins
         'DefaultDatasetForm',
         # base class for IGroupForm plugins
@@ -96,6 +104,8 @@ class _Toolkit(object):
         'auth_disallow_anonymous_access',
         # Helper not found error.
         'HelperError',
+        # Enqueue background job
+        'enqueue_job',
 
         # Fully defined in this file ##
         'add_template_directory',
@@ -134,6 +144,7 @@ class _Toolkit(object):
             CkanVersionException,
             HelperError
         )
+        from ckan.lib.jobs import enqueue as enqueue_job
 
         from paste.deploy import converters
         import pylons
@@ -155,19 +166,21 @@ It stores the configuration values defined in the :ref:`config_file`, eg::
 
 '''
         t['_'] = common._
-        self.docstring_overrides['_'] = '''The Pylons ``_()`` function.
+        self.docstring_overrides['_'] = '''Translates a string to the
+current locale.
 
-The Pylons ``_()`` function is a reference to the ``ugettext()`` function.
+The ``_()`` function is a reference to the ``ugettext()`` function.
 Everywhere in your code where you want strings to be internationalized
 (made available for translation into different languages), wrap them in the
 ``_()`` function, eg.::
 
     msg = toolkit._("Hello")
 
+Returns the localized unicode string.
 '''
         t['ungettext'] = common.ungettext
-        self.docstring_overrides['ungettext'] = '''The Pylons ``ungettext``
-        function.
+        self.docstring_overrides['ungettext'] = '''Translates a string with
+plural forms to the current locale.
 
 Mark a string for translation that has pural forms in the format
 ``ungettext(singular, plural, n)``. Returns the localized unicode string of
@@ -224,9 +237,11 @@ For example: ``bar = toolkit.aslist(config.get('ckan.foo.bar', []))``
         t['literal'] = webhelpers.html.tags.literal
 
         t['get_action'] = logic.get_action
+        t['chained_action'] = logic.chained_action
         t['get_converter'] = logic.get_validator  # For backwards compatibility
         t['get_validator'] = logic.get_validator
         t['check_access'] = logic.check_access
+        t['chained_auth_function'] = logic.chained_auth_function
         t['navl_validate'] = dictization_functions.validate
         t['missing'] = dictization_functions.missing
         t['ObjectNotFound'] = logic.NotFound  # Name change intentional
@@ -237,6 +252,7 @@ For example: ``bar = toolkit.aslist(config.get('ckan.foo.bar', []))``
         t['Invalid'] = logic_validators.Invalid
 
         t['CkanCommand'] = cli.CkanCommand
+        t['load_config'] = cli.load_config
         t['DefaultDatasetForm'] = lib_plugins.DefaultDatasetForm
         t['DefaultGroupForm'] = lib_plugins.DefaultGroupForm
         t['DefaultOrganizationForm'] = lib_plugins.DefaultOrganizationForm
@@ -269,8 +285,10 @@ content type, cookies, etc.
         t['add_ckan_admin_tab'] = self._add_ckan_admin_tabs
         t['requires_ckan_version'] = self._requires_ckan_version
         t['check_ckan_version'] = self._check_ckan_version
+        t['get_endpoint'] = self._get_endpoint
         t['CkanVersionException'] = CkanVersionException
         t['HelperError'] = HelperError
+        t['enqueue_job'] = enqueue_job
 
         # check contents list correct
         errors = set(t).symmetric_difference(set(self.contents))
@@ -440,6 +458,26 @@ content type, cookies, etc.
                     max_version
                 )
             raise CkanVersionException(error)
+
+    @classmethod
+    def _get_endpoint(cls):
+        """Returns tuple in format: (controller|blueprint, action|view).
+        """
+        import ckan.common as common
+        try:
+            # CKAN >= 2.8
+            endpoint = tuple(common.request.endpoint.split('.'))
+        except AttributeError:
+            try:
+                return common.c.controller, common.c.action
+            except AttributeError:
+                return (None, None)
+        # there are some routes('hello_world') that are not using blueprint
+        # For such case, let's assume that view function is a controller
+        # itself and action is None.
+        if len(endpoint) is 1:
+            return endpoint + (None,)
+        return endpoint
 
     def __getattr__(self, name):
         ''' return the function/object requested '''

@@ -2,9 +2,11 @@
 
 import ckan.logic as logic
 import ckan.authz as authz
-from ckan.lib.base import _
+from ckan.common import _, config
 from ckan.logic.auth import (get_package_object, get_group_object,
-                            get_resource_object)
+                             get_resource_object, restrict_anon)
+from ckan.lib.plugins import get_permission_labels
+from paste.deploy.converters import asbool
 
 
 def sysadmin(context, data_dict):
@@ -23,9 +25,11 @@ def site_read(context, data_dict):
     # FIXME we need to remove this for now we allow site read
     return {'success': True}
 
+
 def package_search(context, data_dict):
     # Everyone can search by default
     return {'success': True}
+
 
 def package_list(context, data_dict):
     # List of all active packages are visible by default
@@ -70,24 +74,33 @@ def organization_list(context, data_dict):
     # List of all active organizations are visible by default
     return {'success': True}
 
+
 def organization_list_for_user(context, data_dict):
     return {'success': True}
+
 
 def license_list(context, data_dict):
     # Licenses list is visible by default
     return {'success': True}
 
+
 def vocabulary_list(context, data_dict):
     # List of all vocabularies are visible by default
     return {'success': True}
+
 
 def tag_list(context, data_dict):
     # Tags list is visible by default
     return {'success': True}
 
+
 def user_list(context, data_dict):
     # Users list is visible by default
-    return {'success': True}
+    if not asbool(config.get('ckan.auth.public_user_details', True)):
+        return restrict_anon(context)
+    else:
+        return {'success': True}
+
 
 def package_relationships_list(context, data_dict):
     user = context.get('user')
@@ -109,25 +122,19 @@ def package_relationships_list(context, data_dict):
     else:
         return {'success': True}
 
+
 def package_show(context, data_dict):
     user = context.get('user')
     package = get_package_object(context, data_dict)
-    # draft state indicates package is still in the creation process
-    # so we need to check we have creation rights.
-    if package.state.startswith('draft'):
-        auth = authz.is_authorized('package_update',
-                                       context, data_dict)
-        authorized = auth.get('success')
-    elif package.owner_org is None and package.state == 'active':
-        return {'success': True}
-    else:
-        # anyone can see a public package
-        if not package.private and package.state == 'active':
-            return {'success': True}
-        authorized = authz.has_user_permission_for_group_or_org(
-            package.owner_org, user, 'read')
+    labels = get_permission_labels()
+    user_labels = labels.get_user_dataset_labels(context['auth_user_obj'])
+    authorized = any(
+        dl in user_labels for dl in labels.get_dataset_labels(package))
+
     if not authorized:
-        return {'success': False, 'msg': _('User %s not authorized to read package %s') % (user, package.id)}
+        return {
+            'success': False,
+            'msg': _('User %s not authorized to read package %s') % (user, package.id)}
     else:
         return {'success': True}
 
@@ -163,11 +170,15 @@ def revision_show(context, data_dict):
     # No authz check in the logic function
     return {'success': True}
 
+
 def group_show(context, data_dict):
     user = context.get('user')
     group = get_group_object(context, data_dict)
     if group.state == 'active':
-        return {'success': True}
+        if asbool(config.get('ckan.auth.public_user_details', True)) or \
+            (not asbool(data_dict.get('include_users', False)) and
+                (data_dict.get('object_type', None) != 'user')):
+            return {'success': True}
     authorized = authz.has_user_permission_for_group_or_org(
         group.id, user, 'read')
     if authorized:
@@ -184,14 +195,19 @@ def vocabulary_show(context, data_dict):
     # Allow viewing of vocabs by default
     return {'success': True}
 
+
 def tag_show(context, data_dict):
     # No authz check in the logic function
     return {'success': True}
 
+
 def user_show(context, data_dict):
     # By default, user details can be read by anyone, but some properties like
     # the API key are stripped at the action level if not not logged in.
-    return {'success': True}
+    if not asbool(config.get('ckan.auth.public_user_details', True)):
+        return restrict_anon(context)
+    else:
+        return {'success': True}
 
 
 def package_autocomplete(context, data_dict):
@@ -217,24 +233,9 @@ def user_autocomplete(context, data_dict):
 def format_autocomplete(context, data_dict):
     return {'success': True}
 
+
 def task_status_show(context, data_dict):
     return {'success': True}
-
-def resource_status_show(context, data_dict):
-    return {'success': True}
-
-
-## Modifications for rest api
-def package_show_rest(context, data_dict):
-    return authz.is_authorized('package_show', context, data_dict)
-
-
-def group_show_rest(context, data_dict):
-    return authz.is_authorized('group_show', context, data_dict)
-
-
-def tag_show_rest(context, data_dict):
-    return authz.is_authorized('tag_show', context, data_dict)
 
 
 def get_site_user(context, data_dict):
@@ -342,4 +343,14 @@ def config_option_show(context, data_dict):
 
 def config_option_list(context, data_dict):
     '''List runtime-editable configuration options. Only sysadmins.'''
+    return {'success': False}
+
+
+def job_list(context, data_dict):
+    '''List background jobs. Only sysadmins.'''
+    return {'success': False}
+
+
+def job_show(context, data_dict):
+    '''Show background job. Only sysadmins.'''
     return {'success': False}
