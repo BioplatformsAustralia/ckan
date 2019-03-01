@@ -111,10 +111,19 @@ def make_map():
         if not hasattr(route, '_ckan_core'):
             route._ckan_core = False
 
-    map.connect('invite', '/__invite__/', controller='partyline', action='join_party')
+    map.connect('invite', '/__invite__/',
+                controller='partyline', action='join_party')
 
     map.connect('home', '/', controller='home', action='index')
     map.connect('about', '/about', controller='home', action='about')
+    map.connect('about/citation', '/about/citation',
+                controller='home', action='citation')
+    map.connect('about/apiaccess', '/about/apiaccess',
+                controller='home', action='apiaccess')
+    map.connect('about/stats', '/about/stats',
+                controller='home', action='stats')
+    map.connect('about/credits', '/about/credits',
+                controller='home', action='credits')
 
     # CKAN API versioned.
     register_list = [
@@ -201,7 +210,7 @@ def make_map():
         m.connect('/i18n/{lang}', action='i18n_js_translations')
 
     ###########
-    ## /END API
+    # /END API
     ###########
 
     map.redirect('/packages', '/dataset')
@@ -361,7 +370,8 @@ def make_map():
         m.connect('/user/edit', action='edit')
         # Note: openid users have slashes in their ids, so need the wildcard
         # in the route.
-        m.connect('user_generate_apikey', '/user/generate_key/{id}', action='generate_apikey')
+        m.connect('user_generate_apikey',
+                  '/user/generate_key/{id}', action='generate_apikey')
         m.connect('/user/activity/{id}/{offset}', action='activity')
         m.connect('user_activity_stream', '/user/activity/{id}',
                   action='activity', ckan_icon='time')
@@ -390,7 +400,8 @@ def make_map():
         m.connect('/user/logged_out_redirect', action='logged_out_page')
         m.connect('/user/reset', action='request_reset')
         m.connect('/user/me', action='me')
-        m.connect('/user/private/api/bpa/check_permissions', action='check_permissions')
+        m.connect('/user/private/api/bpa/check_permissions',
+                  action='check_permissions')
         m.connect('/user/set_lang/{lang}', action='set_lang')
         m.connect('user_datasets', '/user/{id:.*}', action='read',
                   ckan_icon='sitemap')

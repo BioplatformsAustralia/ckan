@@ -94,6 +94,18 @@ class HomeController(base.BaseController):
     def about(self):
         return base.render('home/about.html')
 
+    def citation(self):
+        return base.render('home/about/citation.html')
+
+    def apiaccess(self):
+        return base.render('home/about/apiaccess.html')
+
+    def stats(self):
+        return base.render('home/about/resources.html')
+
+    def credits(self):
+        return base.render('home/about/credits.html')
+
     def cache(self, id):
         '''Manual way to clear the caches'''
         if id == 'clear':
