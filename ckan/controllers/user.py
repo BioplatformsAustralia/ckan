@@ -166,7 +166,8 @@ class UserController(base.BaseController):
             h.redirect_to(locale=locale, controller='user', action='login',
                           id=None)
         user_ref = c.userobj.get_reference_preferred_for_uri()
-        h.redirect_to(locale=locale, controller='user', action='dashboard')
+        # login redirect to homepage bpa-archive-ops/issues#770
+        h.redirect_to('/')
 
     def check_permissions(self):
         if not c.user:
