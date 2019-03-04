@@ -440,7 +440,7 @@ class UserController(base.BaseController):
                 if request.params['project_of_interest'] in AUTOREGISTER_PROJECTS:
                     self.log_new_user_request_in_bpam(request.params)
                     # NOTE: No need to do the second step of emailing to Zendesk.
-                    h.redirect_to(controller='user', action='me', __ckan_no_root=True)
+                    h.redirect_to(controller='user', action='me')
                 else:
                     self.log_new_user_request_in_bpam(request.params)
                     self.email_new_user_request_to_helpdesk(request.params)
