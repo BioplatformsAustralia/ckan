@@ -301,7 +301,8 @@ def make_map():
     map.connect('/tag/{id}', controller='tag', action='read')
     # users
     map.redirect('/users/{url:.*}', '/user/{url}')
-
+    m.connect('/user/private/api/bpa/check_permissions', action='check_permissions')
+    
     with SubMapper(map, controller='revision') as m:
         m.connect('/revision', action='index')
         m.connect('/revision/edit/{id}', action='edit')
