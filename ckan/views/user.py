@@ -123,7 +123,8 @@ def index():
 
 
 def me():
-    route = u'dashboard.index' if g.user else u'user.login'
+    # login redirect to homepage bpa-archive-ops/issues#770
+    route = u'home.index' if g.user else u'user.login'
     return h.redirect_to(route)
 
 
