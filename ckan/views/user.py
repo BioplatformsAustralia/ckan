@@ -279,6 +279,11 @@ def log_new_user_request_in_bpam(request_data):
     bpam_log_url = os.environ.get('BPAM_REGISTRATION_LOG_URL')
     bpam_log_key = os.environ.get('BPAM_REGISTRATION_LOG_KEY')
 
+    if not bpam_log_url or not bpam_log_key:
+        log.warning(
+            'Error sending user details to BPAM server. BPAM URL or Key is not set.')
+        return
+
     details = {
         "username": request_params['name'],
         "name": request_params['fullname'],
@@ -293,9 +298,9 @@ def log_new_user_request_in_bpam(request_data):
     r = requests.post(bpam_log_url, data=details)
 
     if r.status_code == 200:
-        logging.warning('User details sent to BPAM server successfully.')
+        log.warning('User details sent to BPAM server successfully.')
     else:
-        logging.warning('Error sending user details to BPAM server.')
+        log.warning('Error sending user details to BPAM server.')
 
 
 def read(id):
@@ -479,6 +484,7 @@ class RegisterView(MethodView):
             return self.get(data_dict)
 
         try:
+            # storing user details for bpa user registration workflow
             user = logic.get_action(u'user_create')(context, data_dict)
             # After user's been created in ckan, grant membership for requested organization(bpa project)
             project_of_interest = request.form['project_of_interest']
@@ -486,7 +492,7 @@ class RegisterView(MethodView):
                 username = user['name']
                 ckan_api_url = os.environ.get('LOCAL_CKAN_API_URL')
                 ckan_api_key = os.environ.get('CKAN_API_KEY')
-                
+
                 remote = ckanapi.RemoteCKAN(ckan_api_url, ckan_api_key)
                 data = {
                     'id': AUTOREGISTER_PROJECTS[project_of_interest],
@@ -499,7 +505,6 @@ class RegisterView(MethodView):
                     apikey=ckan_api_key,
                     requests_kwargs={'verify': False}
                 )
-
         except logic.NotAuthorized:
             base.abort(403, _(u'Unauthorized to create user %s') % u'')
         except logic.NotFound:
