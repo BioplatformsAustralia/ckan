@@ -238,7 +238,7 @@ def email_new_user_request_to_helpdesk(request_data):
     MAILGUN_VARS = dict((t, os.environ.get(t)) for t in MAILGUN_ENVIRON_VARS)
 
     if None in MAILGUN_VARS.values():
-        log.warning("The following mailgun api key is not set {}".format(key))
+        log.warning("The mailgun environent variables are not set")
         _generate_internal_logs(email_body)
         return
 
