@@ -147,7 +147,7 @@ def me():
 
 
 def check_permissions():
-        # bpa-otu auth
+    # bpa-otu auth
     if not g.user:
         base.abort(403, 'Please log into CKAN.')
 
