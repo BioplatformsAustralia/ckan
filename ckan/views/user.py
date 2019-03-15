@@ -17,6 +17,15 @@ import ckan.logic.schema as schema
 import ckan.model as model
 import ckan.plugins as plugins
 from ckan import authz
+
+# bpa imports
+import ckanapi
+import requests
+import os
+import json
+import time
+import hmac
+
 from ckan.common import _, config, g, request
 
 log = logging.getLogger(__name__)
@@ -26,6 +35,15 @@ new_user_form = u'user/new_user_form.html'
 edit_user_form = u'user/edit_user_form.html'
 
 user = Blueprint(u'user', __name__, url_prefix=u'/user')
+
+# bpa auto registration
+AUTOREGISTER_PROJECTS = {
+    'Australian Microbiome': 'australian-microbiome',
+    'Great Barrier Reef': 'bpa-great-barrier-reef',
+    'Wheat Pathogen Transcript': 'bpa-wheat-pathogens-transcript',
+    'Wheat Pathogens Genomes': 'bpa-wheat-pathogens-genomes',
+    'Wheat Cultivars': 'bpa-wheat-cultivars'
+}
 
 
 def _get_repoze_handler(handler_name):
@@ -126,6 +144,163 @@ def me():
     # login redirect to homepage bpa-archive-ops/issues#770
     route = u'home.index' if g.user else u'user.login'
     return h.redirect_to(route)
+
+
+def check_permissions():
+    # bpa-otu auth
+    if not g.user:
+        base.abort(403, 'Please log into CKAN.')
+
+    user_details = {
+        'user': g.user,
+        'auth_user_obj': g.userobj
+    }
+
+    user_id = {'id': g.userobj.id}
+    user_data = logic.get_action('user_show')(user_details, user_id)
+
+    organisations = []
+
+    user_organisations = h.organizations_available(permission='read')
+    for uo in user_organisations:
+        organisations.append(uo['name'])
+
+    data_portion = {
+        'email': user_data['email'],
+        'timestamp': time.time(),
+        'organisations': organisations
+    }
+
+    data_portion = json.dumps(data_portion)
+
+    secret_key = os.environ.get('BPAOTU_AUTH_SECRET_KEY')
+    log.debug(secret_key)
+    digest_maker = hmac.new(secret_key)
+    digest_maker.update(data_portion)
+    digest = digest_maker.hexdigest()
+
+    return (digest + "||" + data_portion)
+
+
+def _generate_internal_logs(log_message):
+    '''
+    This helper function is called if sending a new user registration email fails.
+    '''
+    # bpa user registration
+    log.warning(
+        "There was an error sending the email. Writing to log file.")
+
+    log_path = os.environ.get('REGISTRATION_ERROR_LOG_FILE_PATH')
+    log_file = os.environ.get('REGISTRATION_ERROR_LOG_FILE_NAME')
+
+    if not log_path or not log_file:
+        log.warning(
+            "Unable to get logging file details from environment. Dumping output to console.")
+        log.warning(log_message)
+        return
+
+    try:
+        with open(log_path + '/' + log_file, "a") as fp:
+            fp.write(log_message)
+            fp.write("\n\n")
+    except:
+        log.warning(
+            "Error writing to the log file. Dumping output to console.")
+        log.warning(log_message)
+
+
+def email_new_user_request_to_helpdesk(request_data):
+    '''
+    Send an email containing the user request details to Zendesk.
+    '''
+    # bpa user registration
+    request_params = dict(request_data)
+
+    details = {
+        "username": request_params['name'],
+        "name": request_params['fullname'],
+        "email": request_params['email'],
+        "reason_for_request": request_params['request_reason'],
+        "project_of_interest": request_params['project_of_interest']
+    }
+
+    email_body = "There is a new user registration request. \
+        \nThe user's details are as follows: \
+        \n\
+        \nUsername: {username}\
+        \nName: {name} \
+        \nEmail: {email} \
+        \nReason for Request: {reason_for_request} \
+        \nProject of Interest: {project_of_interest} ".format(**details)
+
+    MAILGUN_ENVIRON_VARS = ['MAILGUN_API_KEY', 'MAILGUN_API_DOMAIN',
+                            'MAILGUN_SENDER_EMAIL', 'MAILGUN_RECEIVER_EMAIL']
+    MAILGUN_VARS = dict((t, os.environ.get(t)) for t in MAILGUN_ENVIRON_VARS)
+
+    if None in MAILGUN_VARS.values():
+        log.warning("The mailgun environent variables are not set")
+        _generate_internal_logs(email_body)
+        return
+
+    # Uncomment this to test failing email send and to test writing to logs
+    # The logs go into /data in the container
+    # sender = 'this_email_would_not_work'
+    sender = MAILGUN_VARS['MAILGUN_SENDER_EMAIL']
+
+    request_url = 'https://api.mailgun.net/v2/{0}/messages'.format(
+        MAILGUN_VARS['MAILGUN_API_DOMAIN'])
+
+    request = requests.post(request_url, auth=('api', MAILGUN_VARS['MAILGUN_API_KEY']), data={
+        'from': sender,
+        'to': MAILGUN_VARS['MAILGUN_RECEIVER_EMAIL'],
+        'subject': 'BPA New User Registration Request',
+        'text': email_body
+    })
+
+    recv_msg = json.loads(request.text)['message']
+
+    if request.status_code == 200:
+        log.warning("New user request sent successfuly.")
+    else:
+        log.warning("Error sending email. Please check logs for details.")
+        log.warning(request.status_code)
+        log.warning(recv_msg)
+
+        _generate_internal_logs(email_body)
+
+
+def log_new_user_request_in_bpam(request_data):
+    '''
+    Send the user registration details to bpam for recording/tracking in the database.
+    '''
+    # bpa user registration
+    request_params = dict(request_data)
+
+    bpam_log_url = os.environ.get('BPAM_REGISTRATION_LOG_URL')
+    bpam_log_key = os.environ.get('BPAM_REGISTRATION_LOG_KEY')
+
+    if not bpam_log_url or not bpam_log_key:
+        log.warning(
+            'Error sending user details to BPAM server. BPAM URL or Key is not set.')
+        return
+
+    details = {
+        "username": request_params['name'],
+        "name": request_params['fullname'],
+        "email": request_params['email'],
+        "reason_for_request": request_params['request_reason'],
+        "project_of_interest": request_params['project_of_interest'],
+        "key": bpam_log_key,
+    }
+
+    # Use the first url to test on a local dev set up
+    #r = requests.post('http://172.17.0.1/polls/record_registrations', data=details)
+    r = requests.post(bpam_log_url, data=details)
+
+    if r.status_code == 200:
+        log.warning('User details sent to BPAM server successfully.')
+    else:
+        log.warning('Error sending user details to BPAM server.')
 
 
 def read(id):
@@ -309,7 +484,27 @@ class RegisterView(MethodView):
             return self.get(data_dict)
 
         try:
-            logic.get_action(u'user_create')(context, data_dict)
+            # storing user details for bpa user registration workflow
+            user = logic.get_action(u'user_create')(context, data_dict)
+            # After user's been created in ckan, grant membership for requested organization(bpa project)
+            project_of_interest = request.form['project_of_interest']
+            if project_of_interest in AUTOREGISTER_PROJECTS:
+                username = user['name']
+                ckan_api_url = os.environ.get('LOCAL_CKAN_API_URL')
+                ckan_api_key = os.environ.get('CKAN_API_KEY')
+
+                remote = ckanapi.RemoteCKAN(ckan_api_url, ckan_api_key)
+                data = {
+                    'id': AUTOREGISTER_PROJECTS[project_of_interest],
+                    'username': username,
+                    'role': 'member'
+                }
+                remote.call_action(
+                    'organization_member_create',
+                    data_dict=data,
+                    apikey=ckan_api_key,
+                    requests_kwargs={'verify': False}
+                )
         except logic.NotAuthorized:
             base.abort(403, _(u'Unauthorized to create user %s') % u'')
         except logic.NotFound:
@@ -332,6 +527,15 @@ class RegisterView(MethodView):
                 return h.redirect_to(u'user.activity', id=data_dict[u'name'])
             else:
                 return base.render(u'user/logout_first.html')
+
+        if request.form:
+            if request.form['project_of_interest'] in AUTOREGISTER_PROJECTS:
+                log_new_user_request_in_bpam(request.form)
+                # NOTE: No need to do the second step of emailing to Zendesk.
+            else:
+                log_new_user_request_in_bpam(request.form)
+                email_new_user_request_to_helpdesk(request.form)
+                return base.render(u'user/registration_success.html')
 
         # log the user in programatically
         resp = h.redirect_to(u'user.me')
@@ -699,6 +903,8 @@ def followers(id):
     return base.render(u'user/followers.html', extra_vars)
 
 
+user.add_url_rule(u'/private/api/bpa/check_permissions',
+                  view_func=check_permissions)
 user.add_url_rule(u'/', view_func=index, strict_slashes=False)
 user.add_url_rule(u'/me', view_func=me)
 
