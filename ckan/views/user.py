@@ -214,14 +214,12 @@ def email_new_user_request_to_helpdesk(request_data):
     Send an email containing the user request details to Zendesk.
     '''
     # bpa user registration
-    request_params = dict(request_data)
-
     details = {
-        "username": request_params['name'],
-        "name": request_params['fullname'],
-        "email": request_params['email'],
-        "reason_for_request": request_params['request_reason'],
-        "project_of_interest": request_params['project_of_interest']
+        "username": request_data[u'name'],
+        "name": request_data[u'fullname'],
+        "email": request_data[u'email'],
+        "reason_for_request": request_data[u'request_reason'],
+        "project_of_interest": request_data[u'project_of_interest']
     }
 
     email_body = "There is a new user registration request. \
@@ -274,7 +272,6 @@ def log_new_user_request_in_bpam(request_data):
     Send the user registration details to bpam for recording/tracking in the database.
     '''
     # bpa user registration
-    request_params = dict(request_data)
 
     bpam_log_url = os.environ.get('BPAM_REGISTRATION_LOG_URL')
     bpam_log_key = os.environ.get('BPAM_REGISTRATION_LOG_KEY')
@@ -285,11 +282,11 @@ def log_new_user_request_in_bpam(request_data):
         return
 
     details = {
-        "username": request_params['name'],
-        "name": request_params['fullname'],
-        "email": request_params['email'],
-        "reason_for_request": request_params['request_reason'],
-        "project_of_interest": request_params['project_of_interest'],
+        "username": request_params[u'name'],
+        "name": request_params[u'fullname'],
+        "email": request_params[u'email'],
+        "reason_for_request": request_params[u'request_reason'],
+        "project_of_interest": request_params[u'project_of_interest'],
         "key": bpam_log_key,
     }
 
@@ -485,20 +482,28 @@ class RegisterView(MethodView):
 
         try:
             # storing user details for bpa user registration workflow
-            user = logic.get_action(u'user_create')(context, data_dict)
+            logic.get_action(u'user_create')(context, data_dict)
             # After user's been created in ckan, grant membership for requested organization(bpa project)
-            project_of_interest = request.form['project_of_interest']
+            project_of_interest = data_dict[u'project_of_interest']
             if project_of_interest in AUTOREGISTER_PROJECTS:
-                username = user['name']
+                username = data_dict[u'name']
                 ckan_api_url = os.environ.get('LOCAL_CKAN_API_URL')
                 ckan_api_key = os.environ.get('CKAN_API_KEY')
-
-                remote = ckanapi.RemoteCKAN(ckan_api_url, ckan_api_key)
+                
                 data = {
                     'id': AUTOREGISTER_PROJECTS[project_of_interest],
                     'username': username,
                     'role': 'member'
                 }
+                # Enable below and disable RemoteCKAN to test on local env
+                # local = ckanapi.LocalCKAN(username='admin')
+                # local.call_action(
+                #     'organization_member_create',
+                #     data_dict=data
+                # )
+                
+                # ckanapi call for remote ckan
+                remote = ckanapi.RemoteCKAN(ckan_api_url, ckan_api_key)
                 remote.call_action(
                     'organization_member_create',
                     data_dict=data,
@@ -530,11 +535,11 @@ class RegisterView(MethodView):
 
         if request.form:
             if request.form['project_of_interest'] in AUTOREGISTER_PROJECTS:
-                log_new_user_request_in_bpam(request.form)
+                log_new_user_request_in_bpam(data_dict)
                 # NOTE: No need to do the second step of emailing to Zendesk.
             else:
-                log_new_user_request_in_bpam(request.form)
-                email_new_user_request_to_helpdesk(request.form)
+                log_new_user_request_in_bpam(data_dict)
+                email_new_user_request_to_helpdesk(data_dict)
                 return base.render(u'user/registration_success.html')
 
         # log the user in programatically
