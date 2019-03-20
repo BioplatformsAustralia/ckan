@@ -272,7 +272,6 @@ def log_new_user_request_in_bpam(request_data):
     Send the user registration details to bpam for recording/tracking in the database.
     '''
     # bpa user registration
-
     bpam_log_url = os.environ.get('BPAM_REGISTRATION_LOG_URL')
     bpam_log_key = os.environ.get('BPAM_REGISTRATION_LOG_KEY')
 
@@ -282,11 +281,11 @@ def log_new_user_request_in_bpam(request_data):
         return
 
     details = {
-        "username": request_params[u'name'],
-        "name": request_params[u'fullname'],
-        "email": request_params[u'email'],
-        "reason_for_request": request_params[u'request_reason'],
-        "project_of_interest": request_params[u'project_of_interest'],
+        "username": request_data[u'name'],
+        "name": request_data[u'fullname'],
+        "email": request_data[u'email'],
+        "reason_for_request": request_data[u'request_reason'],
+        "project_of_interest": request_data[u'project_of_interest'],
         "key": bpam_log_key,
     }
 
@@ -489,26 +488,21 @@ class RegisterView(MethodView):
                 username = data_dict[u'name']
                 ckan_api_url = os.environ.get('LOCAL_CKAN_API_URL')
                 ckan_api_key = os.environ.get('CKAN_API_KEY')
-                
+
                 data = {
                     'id': AUTOREGISTER_PROJECTS[project_of_interest],
                     'username': username,
                     'role': 'member'
                 }
-                # Enable below and disable RemoteCKAN to test on local env
-                # local = ckanapi.LocalCKAN(username='admin')
-                # local.call_action(
-                #     'organization_member_create',
-                #     data_dict=data
-                # )
-                
-                # ckanapi call for remote ckan
-                remote = ckanapi.RemoteCKAN(ckan_api_url, ckan_api_key)
-                remote.call_action(
+
+                if 'localhost' in ckan_api_url: # for local env
+                    ckan = ckanapi.LocalCKAN(username='admin')
+                else:
+                    ckan = ckanapi.RemoteCKAN(ckan_api_url, ckan_api_key) # for staging and prod
+
+                ckan.call_action(
                     'organization_member_create',
-                    data_dict=data,
-                    apikey=ckan_api_key,
-                    requests_kwargs={'verify': False}
+                    data_dict=data
                 )
         except logic.NotAuthorized:
             base.abort(403, _(u'Unauthorized to create user %s') % u'')
