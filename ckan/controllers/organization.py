@@ -28,6 +28,7 @@ class OrganizationController(group.GroupController):
         for plugin in plugins.PluginImplementations(plugins.IFacets):
             facets = plugin.organization_facets(
                 facets, group_type, None)
+        return facets
 
     def read(self, id, limit=50):
         return super(OrganizationController, self).read(id, limit)
