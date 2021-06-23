@@ -36,6 +36,9 @@ def email_new_user_request_to_helpdesk(request_data):
     Send an email containing the user request details to Zendesk.
     '''
     # bpa user registration
+    name = request_data[u'fullname']
+    email = request_data[u'email']
+
     details = {
         "username": request_data[u'name'],
         "name": request_data[u'fullname'],
@@ -57,7 +60,9 @@ def email_new_user_request_to_helpdesk(request_data):
         'Bioplatforms Helpdesk',
         os.environ.get('BIOPLATFORMS_HELPDESK_ADDRESS'),
         'Bioplatforms New User Registration Request',
-        email_body)
+        email_body,
+	cc_name=name,
+	cc_email=email)
 
 
 def log_new_user_request_in_bpam(request_data):

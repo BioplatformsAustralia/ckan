@@ -31,7 +31,7 @@ class MailerException(Exception):
 
 def _mail_recipient(recipient_name, recipient_email,
                     sender_name, sender_url, subject,
-                    body, headers=None):
+                    body, headers=None,cc_name=None,cc_email=None):
 
     if not headers:
         headers = {}
@@ -48,6 +48,9 @@ def _mail_recipient(recipient_name, recipient_email,
     msg['From'] = _("%s <%s>") % (sender_name, mail_from)
     recipient = u"%s <%s>" % (recipient_name, recipient_email)
     msg['To'] = Header(recipient, 'utf-8')
+    if cc_email:
+        cc_recipient = u"%s <%s>" % (cc_name, cc_email)
+        msg['Cc'] = Header(cc_recipient, 'utf-8')
     msg['Date'] = Utils.formatdate(time())
     msg['X-Mailer'] = "CKAN %s" % ckan.__version__
 
@@ -93,8 +96,13 @@ def _mail_recipient(recipient_name, recipient_email,
                                    "smtp.password must be configured as well.")
             smtp_connection.login(smtp_user, smtp_password)
 
-        smtp_connection.sendmail(mail_from, [recipient_email], msg.as_string())
-        log.info("Sent email to {0}".format(recipient_email))
+        if cc_email:
+            smtp_recipients = [recipient_email, cc_email]
+        else:
+            smtp_recipients = [recipient_email]
+
+        smtp_connection.sendmail(mail_from, smtp_recipients, msg.as_string())
+        log.info("Sent email to {0}".format(smtp_recipients))
 
     except smtplib.SMTPException as e:
         msg = '%r' % e
@@ -105,12 +113,12 @@ def _mail_recipient(recipient_name, recipient_email,
 
 
 def mail_recipient(recipient_name, recipient_email, subject,
-                   body, headers={}):
+                   body, headers={}, cc_name=None, cc_email=None):
     site_title = config.get('ckan.site_title')
     site_url = config.get('ckan.site_url')
     return _mail_recipient(recipient_name, recipient_email,
                            site_title, site_url, subject, body,
-                           headers=headers)
+                           headers=headers, cc_name=None, cc_email=None)
 
 
 def mail_user(recipient, subject, body, headers={}):
