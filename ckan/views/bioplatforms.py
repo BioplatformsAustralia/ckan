@@ -47,7 +47,9 @@ def email_new_user_request_to_helpdesk(request_data):
         "project_of_interest": request_data[u'project_of_interest']
     }
 
-    email_body = "There is a new user registration request. \
+    email_body = "Dear Bioplatforms Australian Admin Team, \
+        \n\
+	\nThere is a new user registration request. \
         \nThe user's details are as follows: \
         \n\
         \nUsername: {username}\
