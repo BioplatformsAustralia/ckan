@@ -32,7 +32,6 @@ class MailerException(Exception):
 def _mail_recipient(recipient_name, recipient_email,
                     sender_name, sender_url, subject,
                     body, headers=None,cc_name=None,cc_email=None):
-
     if not headers:
         headers = {}
 
@@ -118,7 +117,7 @@ def mail_recipient(recipient_name, recipient_email, subject,
     site_url = config.get('ckan.site_url')
     return _mail_recipient(recipient_name, recipient_email,
                            site_title, site_url, subject, body,
-                           headers=headers, cc_name=None, cc_email=None)
+                           headers=headers, cc_name=cc_name, cc_email=cc_email)
 
 
 def mail_user(recipient, subject, body, headers={}):
