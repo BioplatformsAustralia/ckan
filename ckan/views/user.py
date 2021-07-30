@@ -280,11 +280,6 @@ class EditView(MethodView):
             data_dict = logic.clean_dict(
                 dictization_functions.unflatten(
                     logic.tuplize_dict(logic.parse_params(request.form))))
-            data_dict.update(logic.clean_dict(
-                dictization_functions.unflatten(
-                    logic.tuplize_dict(logic.parse_params(request.files))))
-            )
-
         except dictization_functions.DataError:
             base.abort(400, _(u'Integrity Error'))
         data_dict.setdefault(u'activity_streams_email_notifications', False)
@@ -305,9 +300,7 @@ class EditView(MethodView):
                 errors = {
                     u'oldpassword': [_(u'Password entered was incorrect')]
                 }
-                error_summary = {_(u'Old Password'): _(u'incorrect password')}\
-                    if not g.userobj.sysadmin \
-                    else {_(u'Sysadmin Password'): _(u'incorrect password')}
+                error_summary = {_(u'Old Password'): _(u'incorrect password')}
                 return self.get(id, data_dict, errors, error_summary)
 
         try:
