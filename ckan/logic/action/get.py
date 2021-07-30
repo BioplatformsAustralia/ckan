@@ -8,9 +8,9 @@ import json
 import datetime
 import socket
 
-from ckan.common import config, asbool
+from ckan.common import config
 import sqlalchemy
-from sqlalchemy import text
+from paste.deploy.converters import asbool
 from six import string_types, text_type
 
 import ckan.lib.dictization
@@ -25,6 +25,7 @@ import ckan.model.misc as misc
 import ckan.plugins as plugins
 import ckan.lib.search as search
 import ckan.lib.plugins as lib_plugins
+import ckan.lib.activity_streams as activity_streams
 import ckan.lib.datapreview as datapreview
 import ckan.authz as authz
 
@@ -39,7 +40,6 @@ _validate = ckan.lib.navl.dictization_functions.validate
 _table_dictize = ckan.lib.dictization.table_dictize
 _check_access = logic.check_access
 NotFound = logic.NotFound
-NotAuthorized = logic.NotAuthorized
 ValidationError = logic.ValidationError
 _get_or_bust = logic.get_or_bust
 
