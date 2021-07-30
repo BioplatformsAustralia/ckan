@@ -755,3 +755,30 @@ def job_cancel(context, data_dict):
         log.info(u'Cancelled background job {}'.format(id))
     except KeyError:
         raise NotFound
+
+
+def api_token_revoke(context, data_dict):
+    """Delete API Token.
+
+    :param string token: Token to remove(required if `jti` not specified).
+    :param string jti: Id of the token to remove(overrides `token` if specified).
+
+    .. versionadded:: 3.0
+    """
+    jti = data_dict.get(u'jti')
+    if not jti:
+        token = _get_or_bust(data_dict, u'token')
+        decoders = plugins.PluginImplementations(plugins.IApiToken)
+        for plugin in decoders:
+            data = plugin.decode_api_token(token)
+            if data:
+                break
+        else:
+            data = api_token.decode(token)
+
+        if data:
+            jti = data.get(u'jti')
+
+    _check_access(u'api_token_revoke', context, {u'jti': jti})
+    model = context[u'model']
+    model.ApiToken.revoke(jti)
