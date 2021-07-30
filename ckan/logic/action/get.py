@@ -8,9 +8,9 @@ import json
 import datetime
 import socket
 
-from ckan.common import config
+from ckan.common import config, asbool
 import sqlalchemy
-from paste.deploy.converters import asbool
+from sqlalchemy import text
 from six import string_types, text_type
 
 import ckan.lib.dictization
@@ -25,7 +25,6 @@ import ckan.model.misc as misc
 import ckan.plugins as plugins
 import ckan.lib.search as search
 import ckan.lib.plugins as lib_plugins
-import ckan.lib.activity_streams as activity_streams
 import ckan.lib.datapreview as datapreview
 import ckan.authz as authz
 
@@ -40,6 +39,7 @@ _validate = ckan.lib.navl.dictization_functions.validate
 _table_dictize = ckan.lib.dictization.table_dictize
 _check_access = logic.check_access
 NotFound = logic.NotFound
+NotAuthorized = logic.NotAuthorized
 ValidationError = logic.ValidationError
 _get_or_bust = logic.get_or_bust
 
@@ -3566,3 +3566,22 @@ def job_show(context, data_dict):
         return jobs.dictize_job(jobs.job_from_id(id))
     except KeyError:
         raise NotFound
+
+
+def api_token_list(context, data_dict):
+    '''Return list of all available API Tokens for current user.
+
+    :returns: collection of all API Tokens
+    :rtype: list
+
+    .. versionadded:: 2.9
+    '''
+    id_or_name = _get_or_bust(data_dict, u'user')
+    _check_access(u'api_token_list', context, data_dict)
+    user = model.User.get(id_or_name)
+    if user is None:
+        raise NotFound("User not found")
+    tokens = model.Session.query(model.ApiToken).filter(
+        model.ApiToken.user_id == user.id
+    )
+    return model_dictize.api_token_list_dictize(tokens, context)

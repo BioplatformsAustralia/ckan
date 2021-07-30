@@ -4663,3 +4663,28 @@ msgstr ""
 msgid "Your password must be 8 characters or longer."
 msgstr ""
 
+#: ckan/templates/user/api_tokens.html:29 ckan/templates/user/read_base.html:22
+msgid "API Tokens"
+msgstr ""
+
+#: ckan/templates/user/api_tokens.html:37
+msgid "You haven't created any API Tokens."
+msgstr ""
+
+#: ckan/views/user.py:169
+msgid "Unauthorized to view API tokens."
+msgstr ""
+
+#: ckan/views/user.py:203
+msgid "Unauthorized to create API tokens."
+msgstr ""
+
+#: ckan/views/user.py:218
+msgid ""
+"API Token created: <code style=\"word-break:break-all;\">{token}</code> "
+"{copy}<br>Make sure to copy it now, you won't be able to see it again!"
+msgstr ""
+
+#: ckan/views/user.py:234
+msgid "Unauthorized to revoke API tokens."
+msgstr ""
