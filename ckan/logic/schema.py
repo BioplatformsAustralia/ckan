@@ -7,6 +7,7 @@ from six import text_type
 import ckan.model
 import ckan.plugins as plugins
 from ckan.logic import get_validator
+from logic.validators import boolean_validator
 
 
 def validator_args(fn):
