@@ -100,6 +100,8 @@ def log_new_user_request_in_bpam(request_data):
 def bioplatforms_register_user(data_dict):
     # storing user details for bpa user registration workflow
     # After user's been created in ckan, grant membership for requested organization(bpa project)
+    if u'project_of_interest' not in data_dict:
+        return
     project_of_interest = data_dict[u'project_of_interest']
     if project_of_interest in AUTOREGISTER_PROJECTS:
         username = data_dict[u'name']

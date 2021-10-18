@@ -344,9 +344,10 @@ class RegisterView(MethodView):
 
         if request.form:
             log_new_user_request_in_bpam(data_dict)
-            if request.form['project_of_interest'] not in AUTOREGISTER_PROJECTS:
-                email_new_user_request_to_helpdesk(data_dict)
-                return base.render(u'user/registration_success.html')
+            if 'project_of_interest' in request.form:
+                if request.form['project_of_interest'] not in AUTOREGISTER_PROJECTS:
+                    email_new_user_request_to_helpdesk(data_dict)
+                    return base.render(u'user/registration_success.html')
 
         # log the user in programatically
         resp = h.redirect_to(u'user.me')
