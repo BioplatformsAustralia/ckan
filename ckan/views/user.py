@@ -17,12 +17,7 @@ import ckan.logic.schema as schema
 import ckan.model as model
 import ckan.plugins as plugins
 from ckan import authz
-from .bioplatforms import (
-    AUTOREGISTER_PROJECTS,
-    bioplatforms_webtoken,
-    email_new_user_request_to_helpdesk,
-    log_new_user_request_in_bpam,
-    bioplatforms_register_user)
+from .bioplatforms import bioplatforms_webtoken
 
 from ckan.common import _, config, g, request
 
@@ -33,6 +28,7 @@ new_user_form = u'user/new_user_form.html'
 edit_user_form = u'user/edit_user_form.html'
 
 user = Blueprint(u'user', __name__, url_prefix=u'/user')
+
 
 def _get_repoze_handler(handler_name):
     u'''Returns the URL that repoze.who will respond to and perform a
@@ -316,9 +312,6 @@ class RegisterView(MethodView):
 
         try:
             logic.get_action(u'user_create')(context, data_dict)
-
-            bioplatforms_register_user(data_dict)
-
         except logic.NotAuthorized:
             base.abort(403, _(u'Unauthorized to create user %s') % u'')
         except logic.NotFound:
@@ -341,13 +334,6 @@ class RegisterView(MethodView):
                 return h.redirect_to(u'user.activity', id=data_dict[u'name'])
             else:
                 return base.render(u'user/logout_first.html')
-
-        if request.form:
-            log_new_user_request_in_bpam(data_dict)
-            if 'project_of_interest' in request.form:
-                if request.form['project_of_interest'] not in AUTOREGISTER_PROJECTS:
-                    email_new_user_request_to_helpdesk(data_dict)
-                    return base.render(u'user/registration_success.html')
 
         # log the user in programatically
         resp = h.redirect_to(u'user.me')
