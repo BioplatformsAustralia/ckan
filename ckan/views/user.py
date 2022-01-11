@@ -17,7 +17,6 @@ import ckan.logic.schema as schema
 import ckan.model as model
 import ckan.plugins as plugins
 from ckan import authz
-from .bioplatforms import bioplatforms_webtoken
 
 from ckan.common import _, config, g, request
 
@@ -724,8 +723,6 @@ def followers(id):
     return base.render(u'user/followers.html', extra_vars)
 
 
-user.add_url_rule(u'/private/api/bpa/check_permissions',
-                  view_func=bioplatforms_webtoken)
 user.add_url_rule(u'/', view_func=index, strict_slashes=False)
 user.add_url_rule(u'/me', view_func=me)
 
