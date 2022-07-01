@@ -459,6 +459,8 @@ def user_new_form_schema(
         user_password_validator: Validator, user_passwords_match: Validator):
     schema = default_user_schema()
 
+    schema['request_reason'] = [not_empty, unicode_safe]
+
     schema['password1'] = [unicode_safe, user_both_passwords_entered,
                            user_password_validator, user_passwords_match]
     schema['password2'] = [unicode_safe]
