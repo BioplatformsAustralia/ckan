@@ -156,7 +156,7 @@ def munge_filename(filename):
     filename = os.path.split(filename)[1]
 
     # Clean up
-    filename = filename.lower().strip()
+    filename = filename.strip()
     filename = substitute_ascii_equivalents(filename)
     filename = re.sub(u'[^a-zA-Z0-9_. -]', '', filename).replace(u' ', u'-')
     filename = re.sub(u'-+', u'-', filename)
