@@ -39,6 +39,8 @@ def _mail_recipient(
         sender_url: str, subject: Any, body: Any,
         body_html: Optional[Any] = None,
         headers: Optional[dict[str, Any]] = None,
+        cc_name: Optional[str] = None,
+        cc_email: Optional[str] = None,
         attachments: Optional[Iterable[Attachment]] = None) -> None:
 
     if not headers:
@@ -66,6 +68,8 @@ def _mail_recipient(
     msg['Subject'] = subject
     msg['From'] = utils.formataddr((sender_name, mail_from))
     msg['To'] = utils.formataddr((recipient_name, recipient_email))
+    if cc_email:
+        msg['Cc'] = utils.formataddr((cc_name, cc_email))
     msg['Date'] = utils.formatdate(time())
     if not config.get('ckan.hide_version'):
         msg['X-Mailer'] = "CKAN %s" % ckan.__version__
@@ -123,8 +127,13 @@ def _mail_recipient(
                                    "smtp.password must be configured as well.")
             smtp_connection.login(smtp_user, smtp_password)
 
-        smtp_connection.sendmail(mail_from, [recipient_email], msg.as_string())
-        log.info("Sent email to {0}".format(recipient_email))
+        if cc_email:
+            smtp_recipients = [recipient_email, cc_email]
+        else:
+            smtp_recipients = [recipient_email]
+
+        smtp_connection.sendmail(mail_from, smtp_recipients, msg.as_string())
+        log.info("Sent email to {0}".format(smtp_recipients))
 
     except smtplib.SMTPException as e:
         msg = '%r' % e
@@ -139,6 +148,8 @@ def mail_recipient(recipient_name: str,
                    subject: str,
                    body: str,
                    body_html: Optional[str] = None,
+                   cc_name: Optional[str] = None,
+                   cc_email: Optional[str] = None,
                    headers: Optional[dict[str, Any]] = None,
                    attachments: Optional[Iterable[Attachment]] = None) -> None:
 
@@ -150,6 +161,11 @@ def mail_recipient(recipient_name: str,
     :param recipient_name: the name of the recipient
     :type recipient: string
     :param recipient_email: the email address of the recipient
+    :type recipient: string
+
+    :param cc_name: the name of the recipient to be CC'd
+    :type recipient: string
+    :param cc_email: the email address of the recipient to be CC'd
     :type recipient: string
 
     :param subject: the email subject
@@ -183,7 +199,9 @@ def mail_recipient(recipient_name: str,
     return _mail_recipient(
         recipient_name, recipient_email,
         site_title, site_url, subject, body,
-        body_html=body_html, headers=headers, attachments=attachments)
+        body_html=body_html, headers=headers, 
+        cc_name=cc_name, cc_email=cc_email)
+        attachments=attachments)
 
 
 def mail_user(recipient: model.User,
