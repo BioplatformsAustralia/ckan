@@ -34,12 +34,14 @@ def index():
     try:
         context = {u'model': model, u'session': model.Session,
                    u'user': g.user, u'auth_user_obj': g.userobj}
+        # bpa: include private datasets when calculating front-page facet values
         data_dict = {u'q': u'*:*',
                      u'facet.field': h.facets(),
                      u'rows': 4,
                      u'start': 0,
                      u'sort': u'view_recent desc',
-                     u'fq': u'capacity:"public"'}
+                     u'fq': u'',
+                     u'include_private': True}
         query = logic.get_action(u'package_search')(context, data_dict)
         g.search_facets = query['search_facets']
         g.package_count = query['count']

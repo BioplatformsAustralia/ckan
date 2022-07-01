@@ -49,7 +49,7 @@ class HomeController(base.BaseController):
                 'rows': 4,
                 'start': 0,
                 'sort': 'views_recent desc',
-                'fq': 'capacity:"public"'
+                'include_private': True,
             }
             query = logic.get_action('package_search')(
                 context, data_dict)
