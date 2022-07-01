@@ -30,6 +30,8 @@ fl_notes.txt
 *~
 .idea
 .vscode
+*.py.orig
+*.py.rej
 
 # custom style
 ckan/public/base/less/custom.less
