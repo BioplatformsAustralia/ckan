@@ -2094,6 +2094,10 @@ def resource_search(context: Context, data_dict: DataDict) -> ActionResult.Resou
     :type offset: int
     :param limit: Apply a limit to the query.
     :type limit: int
+    :param include_private: if ``True``, resources from private datasets will
+        be included in the results. Only resources from private datasets in
+        the user's organizations will be returned and sysadmins will be
+        returned all private resources. Optional, the default is ``False``.
 
     :returns:  A dictionary with a ``count`` field, and a ``results`` field.
     :rtype: dict
@@ -2102,8 +2106,22 @@ def resource_search(context: Context, data_dict: DataDict) -> ActionResult.Resou
     _check_access('resource_search', context, data_dict)
 
     model = context['model']
+    user = context.get('user')
 
     query = data_dict.get('query')
+    include_private = asbool(data_dict.get('include_private', False))
+
+    # return a version of `q` which limits access to private datasets,
+    # appropriate to the access level of the current user
+    def _protect_private(q):
+        if include_private and authz.is_sysadmin(user):
+            return q
+        if include_private and user:
+            orgs = logic.get_action('organization_list_for_user')(
+                {'user': user}, {'permission': 'read'})
+            return q.filter(model.Package.owner_org.in_([org['id'] for org in orgs]))
+        return q.filter(model.Package.private == False)
+
     order_by = data_dict.get('order_by')
     offset = data_dict.get('offset')
     limit = data_dict.get('limit')
@@ -2123,8 +2141,8 @@ def resource_search(context: Context, data_dict: DataDict) -> ActionResult.Resou
     q = model.Session.query(model.Resource) \
          .join(model.Package) \
          .filter(model.Package.state == 'active') \
-         .filter(model.Package.private == False) \
-         .filter(model.Resource.state == 'active') \
+         .filter(model.Resource.state == 'active')
+    q = _protect_private(q)
 
     resource_fields = model.Resource.get_columns()
     for field, term in fields.items():

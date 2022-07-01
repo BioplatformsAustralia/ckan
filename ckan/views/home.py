@@ -48,13 +48,16 @@ def index() -> str:
             }
         )
 
+        # bpa: include private datasets when calculating front-page facet values
         data_dict: dict[str, Any] = {
             u'q': u'*:*',
             u'facet.field': h.facets(),
             u'rows': 4,
             u'start': 0,
             u'sort': u'view_recent desc',
-            u'fq': u'capacity:"public"'}
+            u'fq': u'capacity:"public"',
+            u'include_private': True}
+        
         query = logic.get_action(u'package_search')(context, data_dict)
         g.package_count = query['count']
         g.datasets = query['results']
