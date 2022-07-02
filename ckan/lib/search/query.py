@@ -137,6 +137,7 @@ class SearchQuery(object):
 
     def __init__(self):
         self.results = []
+        self.default_max_results = 1000
         self.count = 0
 
     @property
@@ -152,7 +153,7 @@ class SearchQuery(object):
                     _open_licenses.append(license.id)
         return _open_licenses
 
-    def get_all_entity_ids(self, max_results=1000):
+    def get_all_entity_ids(self, max_results=None):
         """
         Return a list of the IDs of all indexed packages.
         """
@@ -251,10 +252,13 @@ class ResourceSearchQuery(SearchQuery):
 
 
 class PackageSearchQuery(SearchQuery):
-    def get_all_entity_ids(self, max_results=1000):
+    def get_all_entity_ids(self, max_results=None):
         """
         Return a list of the IDs of all indexed packages.
         """
+        if max_results is None:
+            max_results = int(config.get('ckan.search.rows_max', self.default_max_results))
+
         query = "*:*"
         fq = "+site_id:\"%s\" " % config.get('ckan.site_id')
         fq += "+state:active "

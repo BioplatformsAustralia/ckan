@@ -439,7 +439,9 @@ def tag_dictize(tag, context, include_datasets=True):
         else:
             tag_query += u'+tags:"{0}"'.format(tag.name)
 
-        q = {'q': tag_query, 'fl': 'data_dict', 'wt': 'json', 'rows': 1000}
+        max_rows = int(config.get('ckan.search.rows_max', 1000))
+
+        q = {'q': tag_query, 'fl': 'data_dict', 'wt': 'json', 'rows': max_rows}
 
         package_dicts = [h.json.loads(result['data_dict'])
                          for result in query.run(q)['results']]
