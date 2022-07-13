@@ -40,6 +40,8 @@ flask-multistatic==1.0
     # via -r requirements.in
 idna==2.10
     # via requests
+importlib-metadata==4.12.0
+    # via markdown
 itsdangerous==1.1.0
     # via flask
 jinja2==2.10.1
@@ -51,7 +53,7 @@ lxml==4.6.3
     # via feedgen
 mako==1.1.5
     # via alembic
-markdown==2.6.7
+markdown==3.3.6
     # via -r requirements.in
 markupsafe==1.1.1
     # via
@@ -139,6 +141,8 @@ werkzeug[watchdog]==1.0.0
     # via
     #   -r requirements.in
     #   flask
+zipp==3.8.1
+    # via importlib-metadata
 zope-interface==5.4.0
     # via
     #   -r requirements.in
