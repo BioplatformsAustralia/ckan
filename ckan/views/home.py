@@ -9,7 +9,6 @@ import ckan.lib.search as search
 import ckan.lib.helpers as h
 
 from ckan.common import g, config, _
-from ckan.types import Context, Response
 
 
 CACHE_PARAMETERS = [u'__cache', u'__no_cache__']
@@ -76,7 +75,7 @@ def about():
     return base.render(u'home/about.html', extra_vars={})
 
 
-def robots_txt() -> Response:
+def robots_txt():
     '''display robots.txt'''
     resp = make_response(base.render('home/robots.txt'))
     resp.headers['Content-Type'] = "text/plain; charset=utf-8"
