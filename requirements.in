@@ -36,3 +36,4 @@ watchdog==2.1.5         # For py3 support
 webassets==0.12.1
 Werkzeug[watchdog]==1.0.0
 zope.interface==5.4.0
+urllib3>=1.26.13        # BPA - force minimum version of dependency for ckanext-harvest/ckanext-spatial
