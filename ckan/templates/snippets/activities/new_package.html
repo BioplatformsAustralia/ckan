@@ -1,4 +1,4 @@
-{% if activity.data|length > 0 %}
+{% if activity.data.package is defined %}
   {% set dataset_type = activity.data.package.type or 'dataset' %}
 {% else %}
   {% set dataset_type = 'dataset' %}
