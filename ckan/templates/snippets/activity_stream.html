@@ -5,7 +5,11 @@
 {% endmacro %}
 
 {% macro dataset(activity) %}
-  {% set dataset_type = activity.data.package.type or 'dataset' %}
+  {% if activity.data.package is defined %}
+   {% set dataset_type = activity.data.package.type or 'dataset' %}
+  {% else %}
+   {% set dataset_type = 'dataset' %}
+  {% endif %}
   <span class="dataset">
     {{ h.link_to(activity.data.package.title if activity.data.package else _('unknown'),
       h.url_for(dataset_type ~ '.read', id=activity.object_id)) }}
