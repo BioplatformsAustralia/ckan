@@ -9,13 +9,32 @@ Changelog
 
 .. towncrier release notes start
 
+v.2.9.10 2023-12-13
+===================
+
+Bugfixes
+--------
+
+- `CVE-2023-50248 <https://github.com/ckan/ckan/security/advisories/GHSA-7fgc-89cx-w8j5>`_: fix potential
+  out of memory error when submitting the dataset form with a specially-crafted field.
+- Update resource datastore_active with a single statement (`#7833 <https://github.com/ckan/ckan/pull/7833>`_)
+- Fix downloading datastore resources as json with null values in json columns
+  (`#7545 <https://github.com/ckan/ckan/pull/7545>`_)
+- Fix errors when running the `ckan db upgrade` command (`#7681
+  <https://github.com/ckan/ckan/pull/7681>`_)
+- Fix ``deprecated`` decorator (`#7939
+  <https://github.com/ckan/ckan/pull/7939>`_)
+- Changed dataset query to check for ``+state:`` in the ``fq_list`` as well as the
+  `fq` parameter before forcing ``state:active`` (`#7905
+  <https://github.com/ckan/ckan/pull/7905>`_)
+
 v.2.9.9 2023-05-24
 ==================
 
 Bugfixes
 --------
 
-- `CVE-2023-32321 <https://github.com/ckan/ckan/security/advisories/GHSA-446m-hmmm-hm8m>`_: fix 
+- `CVE-2023-32321 <https://github.com/ckan/ckan/security/advisories/GHSA-446m-hmmm-hm8m>`_: fix
   potential path traversal, remote code execution, information disclosure and
   DOS vulnerabilities via crafted resource ids.
 - Names are now quoted in From and To addresses in emails, meaning that site titles with
@@ -29,15 +48,19 @@ Migration notes
   store the session data in the `client-side cookie <https://beaker.readthedocs.io/en/latest/sessions.html#cookie-based>`_.
   This will probably be the default behaviour in future CKAN versions::
 
-	# ckan.ini
-	beaker.session.type = cookie
-    beaker.session.data_serializer = json
-	beaker.session.validate_key = CHANGE_ME
+    # ckan.ini
 
-	beaker.session.httponly = True
-	beaker.session.secure = True
-	beaker.session.samesite = Lax
+    beaker.session.type = cookie
+    beaker.session.data_serializer = json
+    # Use a long, random string for this setting
+    beaker.session.validate_key = CHANGE_ME
+
+    beaker.session.httponly = True
+    beaker.session.secure = True
+    beaker.session.samesite = Lax
     # or Strict, depending on your setup
+
+  .. note:: You might need to install an additional library that can provide AES encryption, e.g. ``pip install cryptography``
 
 
 v.2.9.8 2023-02-15
