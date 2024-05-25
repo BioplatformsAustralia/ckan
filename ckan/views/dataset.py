@@ -1137,7 +1137,14 @@ def changes(id, package_type=None):
     # 'pkg_dict' needs to go to the templates for page title & breadcrumbs.
     # Use the current version of the package, in case the name/title have
     # changed, and we need a link to it which works
-    pkg_id = activity_diff[u'activities'][1][u'data'][u'package'][u'id']
+
+    # BPA - catch errors in activity records
+    try:
+        pkg_id = activity_diff[u'activities'][1][u'data'][u'package'][u'id']
+    except Exception as e:
+        log.info(u'Error with Activity: {} - {}'.format(str(e), activity_id))
+        return base.abort(404, _(u'Activity not available'))
+
     current_pkg_dict = get_action(u'package_show')(context, {u'id': pkg_id})
     pkg_activity_list = get_action(u'package_activity_list')(
         context, {
