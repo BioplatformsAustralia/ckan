@@ -2412,13 +2412,18 @@ def format_resource_items(items):
                 pass
         elif isinstance(value, string_types):
             # check if strings are actually datetime/number etc
-            if re.search(reg_ex_datetime, value):
-                datetime_ = date_str_to_datetime(value)
-                value = formatters.localised_nice_date(datetime_)
-            elif re.search(reg_ex_float, value):
-                value = formatters.localised_number(float(value))
-            elif re.search(reg_ex_int, value):
-                value = formatters.localised_number(int(value))
+            try:
+                if re.search(reg_ex_datetime, value):
+                    datetime_ = date_str_to_datetime(value)
+                    value = formatters.localised_nice_date(datetime_)
+                elif re.search(reg_ex_float, value):
+                    value = formatters.localised_number(float(value))
+                elif re.search(reg_ex_int, value):
+                    int_value = int(value)
+                    value = formatters.localised_number(int(value))
+            except Exception:
+                # something happened when we tried to format, just return what we were given.
+                pass
         elif ((isinstance(value, int) or isinstance(value, float))
                 and value not in (True, False)):
             value = formatters.localised_number(value)
