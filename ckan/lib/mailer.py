@@ -200,7 +200,7 @@ def mail_recipient(recipient_name: str,
         recipient_name, recipient_email,
         site_title, site_url, subject, body,
         body_html=body_html, headers=headers, 
-        cc_name=cc_name, cc_email=cc_email)
+        cc_name=cc_name, cc_email=cc_email,
         attachments=attachments)
 
 
