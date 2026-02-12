@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools==44.1.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [tool.towncrier]
 directory = "changes"
 package = "ckan"
@@ -33,3 +37,4 @@ showcontent = true
 
 [tool.black]
 line-length = 79
+
