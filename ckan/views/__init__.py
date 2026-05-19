@@ -55,7 +55,7 @@ def check_session_cookie(response):
                     is_valid_cookie_data = True
                     break
             if not is_valid_cookie_data:
-                if session.id:
+                if session: # or could be "if id in session:"
                     log.debug(u'No valid session data - deleting session')
                     log.debug(u'Session: %r', session.items())
                     session.delete()
@@ -63,7 +63,7 @@ def check_session_cookie(response):
                     log.debug(u'No session id - deleting session cookie')
                     response.delete_cookie(cookie)
         # Remove auth_tkt repoze.who cookie if user not logged in.
-        elif cookie == u'auth_tkt' and not session.id:
+        elif cookie == u'auth_tkt' and not id in session:
             response.delete_cookie(cookie)
 
     return response
